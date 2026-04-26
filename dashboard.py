@@ -450,18 +450,26 @@ textarea:focus,input[type=text]:focus{outline:none;border-color:rgba(0,212,255,.
     <div class="sec-info" id="sec-info">Před každým pushem proběhne automaticky security scan.</div>
   </div>
 
-  <!-- Save session + note -->
-  <div class="grid grid-2">
-    <div class="card">
-      <div class="card-label">Uložit Session</div>
-      <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px">Aktualizuje SESSION.md s dnešním datem a commitne stav projektu.</p>
-      <button class="btn btn-save" onclick="saveSession()">💾 Uložit Session</button>
+  <!-- Save session -->
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-label">💾 Uložit Session &amp; Push</div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:16px;line-height:1.6">
+      Zjistí co se změnilo, přepíše <code style="color:var(--c);font-size:.8rem">SESSION.md</code>,
+      commitne a pushne na GitHub. Spusť na konci každého session.
+    </p>
+    <div class="field-label" style="margin-bottom:8px">Příští kroky pro nový session (každý na nový řádek):</div>
+    <textarea id="next-steps-text" rows="4" placeholder="Napsat lekci 2: Jak AI myslí&#10;Vytvořit ChatGPT průvodce&#10;Rozšířit prompt knihovnu…"></textarea>
+    <div style="margin-top:12px">
+      <button class="btn btn-save" onclick="saveSession()">💾 Uložit Session &amp; Push na GitHub</button>
     </div>
-    <div class="card">
-      <div class="card-label">Přidat poznámku</div>
-      <textarea id="note-text" placeholder="Co bylo uděláno… co řeším… příští kroky…"></textarea>
-      <button class="btn btn-note" onclick="addNote()" style="margin-top:10px">📌 Přidat do SESSION.md</button>
-    </div>
+  </div>
+
+  <!-- Quick note -->
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-label">📌 Rychlá poznámka</div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:12px">Přidá poznámku do SESSION.md bez commitu — pro průběžné zápisky.</p>
+    <textarea id="note-text" rows="3" placeholder="Co právě řeším… nápad… blocker…"></textarea>
+    <button class="btn btn-note" onclick="addNote()" style="margin-top:10px">📌 Přidat poznámku</button>
   </div>
 
   <!-- Commits -->
@@ -575,8 +583,21 @@ async function pushGithub(){
 
 // ── Save session ──
 async function saveSession(){
-  const d=await api('/api/save-session');
-  toast(d.message,d.ok);if(d.ok)refreshStatus();
+  const btn=event.target;
+  const next=document.getElementById('next-steps-text').value.trim();
+  btn.innerHTML='<span class="spin"></span> Ukládám…';btn.disabled=true;
+  const d=await api('/api/save-session',{next_steps:next});
+  btn.innerHTML='💾 Uložit Session & Push na GitHub';btn.disabled=false;
+  toast(d.message,d.ok);
+  if(d.ok){
+    refreshStatus();
+    // Reset scan stavu — po pushnutí je potřeba nový scan
+    scanPassed=false;
+    document.getElementById('btn-push').disabled=true;
+    document.getElementById('sec-badge').className='sec-badge badge-idle';
+    document.getElementById('sec-badge').textContent='Nespuštěno';
+    document.getElementById('sec-results').style.display='none';
+  }
 }
 
 // ── Add note ──
@@ -623,6 +644,7 @@ def get_next_steps():
 
 
 def save_session_note(note):
+    """Přidá poznámku do SESSION.md (tlačítko Přidat poznámku)."""
     path = PROJECT_ROOT / 'SESSION.md'
     try:
         content = path.read_text(encoding='utf-8')
@@ -632,9 +654,85 @@ def save_session_note(note):
         block = f'\n### Poznámka {today}\n{note}\n'
         content = content.replace(marker, marker + block, 1)
         path.write_text(content, encoding='utf-8')
-        return True, 'SESSION.md aktualizován'
+        return True, 'Poznámka přidána do SESSION.md'
     except Exception as e:
         return False, str(e)
+
+
+def save_session_full(next_steps_text=''):
+    """
+    Kompletní uložení session:
+    1. Zjistí co se změnilo (git diff)
+    2. Přepíše SESSION.md — datum, co bylo uděláno, příští kroky
+    3. Commitne a pushne na GitHub
+    """
+    path = PROJECT_ROOT / 'SESSION.md'
+    try:
+        content = path.read_text(encoding='utf-8')
+    except Exception as e:
+        return False, str(e)
+
+    today = datetime.date.today().isoformat()
+    now   = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+
+    # Co se změnilo v tomto session (git status)
+    changed_out, _, _ = run_git(['status', '--short'])
+    changed_lines = [l.strip() for l in changed_out.splitlines() if l.strip()]
+
+    if changed_lines:
+        done_items = '\n'.join(f'- Upraven soubor: `{l[3:]}`' for l in changed_lines)
+    else:
+        done_items = '- Žádné nové změny souborů v tomto session'
+
+    # Aktualizuj datum
+    content = re.sub(r'\*\*Datum:\*\*.*', f'**Datum:** {today}', content)
+    content = re.sub(r'\*\*Session číslo:\*\*.*',
+                     lambda m: m.group().rstrip(),  # zachovat
+                     content)
+
+    # Přepiš sekci "Co bylo uděláno"
+    done_marker   = '## Co bylo uděláno v tomto sessionu'
+    next_marker   = '## Aktuální fáze projektu'
+    done_block    = f'{done_marker}\n\n*Uloženo automaticky: {now}*\n\n{done_items}\n\n'
+
+    # Najdi a nahraď celou sekci
+    pattern_done = re.compile(
+        rf'{re.escape(done_marker)}.*?(?={re.escape(next_marker)})', re.DOTALL)
+    if pattern_done.search(content):
+        content = pattern_done.sub(done_block, content)
+
+    # Přepiš "Příští kroky" pokud uživatel zadal
+    if next_steps_text.strip():
+        next_steps_marker = '## Příští kroky — pro nový session'
+        open_issues_marker = '## Otevřené otázky'
+        steps_lines = '\n'.join(
+            f'{i+1}. {s.strip()}' for i, s in
+            enumerate(next_steps_text.strip().splitlines()) if s.strip()
+        )
+        steps_block = f'{next_steps_marker}\n\n{steps_lines}\n\n'
+        pattern_steps = re.compile(
+            rf'{re.escape(next_steps_marker)}.*?(?={re.escape(open_issues_marker)})',
+            re.DOTALL)
+        if pattern_steps.search(content):
+            content = pattern_steps.sub(steps_block, content)
+
+    try:
+        path.write_text(content, encoding='utf-8')
+    except Exception as e:
+        return False, f'Zápis SESSION.md selhal: {e}'
+
+    # Commit + push
+    run_git(['add', '-A'])
+    msg = generate_commit_msg() or f'session save [{today}]'
+    _, err, code = run_git(['commit', '-m', msg])
+    if code != 0 and 'nothing to commit' not in err:
+        return False, f'Commit selhal: {err}'
+
+    _, err, code = run_git(['push'])
+    if code != 0:
+        return False, f'SESSION.md uložen lokálně, push selhal: {err}'
+
+    return True, f'Session uložen a pushnut → "{msg}"'
 
 
 # ── HTTP Handler ───────────────────────────────────────────────────────────────
@@ -684,8 +782,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._json({'ok': ok, 'message': msg, 'scan': scan})
 
         elif self.path == '/api/save-session':
-            note = f'Session uložen automaticky {datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}'
-            ok, msg = save_session_note(note)
+            next_steps = body.get('next_steps', '')
+            ok, msg = save_session_full(next_steps)
             self._json({'ok': ok, 'message': msg})
 
         elif self.path == '/api/add-note':
