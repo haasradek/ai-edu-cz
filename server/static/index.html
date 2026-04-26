@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI-EDU-CZ · Mission Control</title>
+<style>
+:root{
+  --bg:#000;--bg1:rgba(255,255,255,.03);--bg2:rgba(255,255,255,.06);
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);
+  --c:#00d4ff;--c2:#7c3aed;--c3:#00ff88;--red:#ff3355;--yellow:#ffaa00;
+  --txt:#e8eaf0;--muted:#6b7280;
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--txt);min-height:100vh;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 10% 10%,rgba(0,212,255,.06) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 90%,rgba(124,58,237,.07) 0%,transparent 60%),
+    repeating-linear-gradient(0deg,transparent,transparent 59px,rgba(255,255,255,.02) 59px,rgba(255,255,255,.02) 60px),
+    repeating-linear-gradient(90deg,transparent,transparent 59px,rgba(255,255,255,.02) 59px,rgba(255,255,255,.02) 60px);
+}
+
+/* ── Header ── */
+header{
+  padding:20px 32px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(20px);
+  position:sticky;top:0;z-index:50;
+}
+.logo{display:flex;align-items:center;gap:14px}
+.logo-icon{
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--c),var(--c2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;box-shadow:0 0 20px rgba(0,212,255,.3);
+}
+.logo h1{font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
+.logo h1 span{color:var(--c)}
+.logo p{font-size:.72rem;color:var(--muted);margin-top:2px}
+#clock{font-size:.78rem;color:var(--muted);text-align:right}
+#clock b{display:block;font-size:.95rem;color:var(--txt);font-variant-numeric:tabular-nums}
+
+/* ── Nav tabs ── */
+nav{
+  display:flex;gap:4px;padding:0 32px;
+  background:rgba(0,0,0,.4);border-bottom:1px solid var(--border);
+}
+.tab{
+  padding:12px 20px;font-size:.82rem;font-weight:600;cursor:pointer;
+  border-bottom:2px solid transparent;color:var(--muted);
+  transition:color .15s, border-color .15s;letter-spacing:-.01em;
+}
+.tab:hover{color:var(--txt)}
+.tab.active{color:var(--c);border-bottom-color:var(--c)}
+
+/* ── Layout ── */
+.page{display:none;padding:28px 32px}
+.page.active{display:block}
+.wrap{max-width:1200px;margin:0 auto}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:900px){.grid-3,.grid-2{grid-template-columns:1fr}}
+
+/* ── Card ── */
+.card{
+  background:var(--bg1);border:1px solid var(--border);
+  border-radius:var(--r);padding:22px;transition:border-color .2s;
+}
+.card:hover{border-color:var(--border2)}
+.card-label{
+  font-size:.68rem;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:16px;display:flex;align-items:center;gap:8px;
+}
+.card-label::before{content:'';display:block;width:16px;height:2px;
+  background:var(--c);border-radius:2px}
+
+/* ── Stats ── */
+.stat-num{font-size:3rem;font-weight:800;line-height:1;
+  background:linear-gradient(135deg,var(--c),var(--c2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-sub{font-size:.78rem;color:var(--muted);margin-top:6px}
+.pbar-bg{background:rgba(255,255,255,.05);border-radius:99px;height:5px;margin-top:18px;overflow:hidden}
+.pbar{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--c),var(--c2));transition:width .8s ease}
+
+/* ── Pre ── */
+pre{
+  background:rgba(0,0,0,.5);border:1px solid var(--border);
+  border-radius:10px;padding:12px;font-size:.72rem;
+  color:rgba(255,255,255,.45);overflow:auto;max-height:180px;
+  font-family:'Cascadia Code','Fira Code',monospace;line-height:1.6;
+}
+
+/* ── Steps ── */
+.steps{list-style:none}
+.steps li{
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);
+  font-size:.82rem;color:rgba(255,255,255,.7);
+  display:flex;gap:10px;align-items:flex-start;
+}
+.steps li::before{content:'→';color:var(--c);flex-shrink:0;margin-top:1px}
+.steps li:last-child{border-bottom:none}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:10px 20px;border-radius:10px;border:none;
+  font-size:.84rem;font-weight:600;cursor:pointer;
+  transition:all .18s;letter-spacing:-.01em;
+}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.btn-primary{background:linear-gradient(135deg,var(--c),var(--c2));color:#fff;
+  box-shadow:0 0 24px rgba(0,212,255,.2)}
+.btn-primary:hover:not(:disabled){box-shadow:0 0 36px rgba(0,212,255,.4);transform:translateY(-1px)}
+.btn-warn{background:rgba(255,170,0,.12);color:var(--yellow);border:1px solid rgba(255,170,0,.22)}
+.btn-warn:hover{background:rgba(255,170,0,.2)}
+.btn-green{background:rgba(0,255,136,.1);color:var(--c3);border:1px solid rgba(0,255,136,.2)}
+.btn-green:hover{background:rgba(0,255,136,.18)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);font-size:.78rem;padding:7px 13px}
+.btn-ghost:hover{color:var(--txt);border-color:var(--border2)}
+.btn-sm{padding:6px 14px;font-size:.76rem}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:2px}
+
+/* ── Security ── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;
+  border-radius:99px;font-size:.72rem;font-weight:700}
+.badge-ok{background:rgba(0,255,136,.12);color:var(--c3);border:1px solid rgba(0,255,136,.2)}
+.badge-warn{background:rgba(255,51,85,.12);color:var(--red);border:1px solid rgba(255,51,85,.2)}
+.badge-idle{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--border)}
+.sec-issue{background:rgba(255,51,85,.06);border:1px solid rgba(255,51,85,.15);
+  border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:.78rem}
+.sec-issue .issue-type{color:var(--red);font-weight:700;margin-bottom:3px}
+.sec-issue .issue-file{color:var(--muted)}
+.sec-issue .issue-preview{font-family:'Cascadia Code',monospace;
+  color:rgba(255,255,255,.35);font-size:.7rem;margin-top:3px}
+.sec-ok{display:flex;align-items:center;gap:10px;color:var(--c3);font-size:.84rem;padding:10px 0}
+.sec-info{font-size:.72rem;color:var(--muted);margin-top:8px}
+
+/* ── Form ── */
+textarea,input[type=text],select{
+  width:100%;background:rgba(0,0,0,.4);border:1px solid var(--border);
+  border-radius:10px;color:var(--txt);padding:10px 14px;font-size:.84rem;
+  transition:border-color .2s;font-family:inherit;
+}
+textarea{resize:vertical;min-height:86px}
+textarea:focus,input:focus,select:focus{outline:none;border-color:rgba(0,212,255,.4)}
+select option{background:#111}
+.field-label{font-size:.72rem;color:var(--muted);margin-bottom:7px;
+  font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;padding:13px 20px;border-radius:12px;
+  font-size:.84rem;font-weight:600;display:none;z-index:999;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);animation:slideIn .22s ease;max-width:340px}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.toast-ok{background:linear-gradient(135deg,rgba(0,255,136,.15),rgba(0,212,255,.1));
+  border:1px solid rgba(0,255,136,.3);color:var(--c3)}
+.toast-err{background:rgba(255,51,85,.12);border:1px solid rgba(255,51,85,.3);color:var(--red)}
+
+/* ── Spinner ── */
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.2);
+  border-top-color:var(--c);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Section title ── */
+.section-title{
+  font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin:24px 0 12px;
+  display:flex;align-items:center;gap:12px;
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Feed ── */
+.feed-toolbar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin-bottom:18px;
+}
+.feed-toolbar select{width:auto;min-width:160px}
+.feed-counter{margin-left:auto;font-size:.78rem;color:var(--muted)}
+.feed-counter b{color:var(--c)}
+
+.feed-list{display:flex;flex-direction:column;gap:10px}
+
+.feed-item{
+  background:var(--bg1);border:1px solid var(--border);
+  border-radius:14px;padding:16px 20px;
+  display:grid;grid-template-columns:1fr auto;gap:12px;
+  transition:border-color .15s;
+}
+.feed-item:hover{border-color:var(--border2)}
+.feed-item.processed{opacity:.55}
+.feed-item.processed .fi-title{color:var(--muted)}
+
+.fi-meta{
+  display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;
+}
+.fi-source{
+  font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 9px;border-radius:99px;
+  background:rgba(0,212,255,.1);color:var(--c);
+  border:1px solid rgba(0,212,255,.18);
+}
+.fi-date{font-size:.7rem;color:var(--muted)}
+.fi-new{
+  font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:99px;
+  background:rgba(0,255,136,.12);color:var(--c3);border:1px solid rgba(0,255,136,.2);
+}
+
+.fi-title{
+  font-size:.93rem;font-weight:600;line-height:1.4;
+  color:var(--txt);margin-bottom:5px;
+}
+.fi-title a{color:inherit;text-decoration:none}
+.fi-title a:hover{color:var(--c)}
+
+.fi-summary{font-size:.78rem;color:var(--muted);line-height:1.55;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+.fi-actions{
+  display:flex;flex-direction:column;gap:7px;align-items:flex-end;
+  justify-content:center;min-width:120px;
+}
+
+.feed-empty{
+  text-align:center;padding:60px 20px;color:var(--muted);
+}
+.feed-empty .empty-icon{font-size:2.5rem;margin-bottom:12px}
+.feed-empty p{font-size:.84rem;margin-bottom:16px}
+
+/* ── Load more ── */
+.load-more-wrap{text-align:center;margin-top:18px}
+
+/* ── Pulse dot ── */
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--c3);
+  box-shadow:0 0 0 0 rgba(0,255,136,.4);animation:pulse 2s infinite;display:inline-block}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,255,136,.4)}
+  70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🤖</div>
+    <div>
+      <h1>AI-EDU-<span>CZ</span></h1>
+      <p>Mission Control Dashboard</p>
+    </div>
+  </div>
+  <div id="clock"><span id="date-str"></span><b id="time-str"></b></div>
+</header>
+
+<nav>
+  <div class="tab active" onclick="showTab('overview')">📊 Přehled</div>
+  <div class="tab" onclick="showTab('feed')">📰 Feed <span id="feed-badge" style="display:none;margin-left:5px;font-size:.64rem;padding:1px 7px;border-radius:99px;background:rgba(0,212,255,.15);color:var(--c);border:1px solid rgba(0,212,255,.2)"></span></div>
+  <div class="tab" onclick="showTab('github')">⚡ GitHub</div>
+  <div class="tab" onclick="showTab('session')">💾 Session</div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: Přehled -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="page active wrap" id="tab-overview">
+
+  <div class="grid-3" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-label">Obsah</div>
+      <div class="stat-num" id="stat-done">—</div>
+      <div class="stat-sub" id="stat-sub">z — lekcí dokončeno</div>
+      <div class="pbar-bg"><div class="pbar" id="pbar" style="width:0%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Feed (novinky v DB)</div>
+      <div class="stat-num" id="stat-feed-total">—</div>
+      <div class="stat-sub" id="stat-feed-new">— nových ke zpracování</div>
+      <div style="margin-top:14px">
+        <button class="btn btn-ghost btn-sm" onclick="showTab('feed')">Otevřít Feed →</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Git stav</div>
+      <pre id="git-status" style="max-height:100px">Načítám…</pre>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Příští kroky</div>
+      <ul class="steps" id="next-steps"><li>Načítám…</li></ul>
+    </div>
+    <div class="card">
+      <div class="card-label">Poslední commity</div>
+      <pre id="commits" style="max-height:160px">Načítám…</pre>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: Feed -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="page wrap" id="tab-feed">
+
+  <div class="feed-toolbar">
+    <button class="btn btn-primary btn-sm" onclick="fetchRss()" id="btn-fetch-rss">
+      📡 Stáhnout novinky
+    </button>
+    <select id="feed-filter-source" onchange="loadFeed(true)">
+      <option value="">Všechny zdroje</option>
+    </select>
+    <select id="feed-filter-processed" onchange="loadFeed(true)">
+      <option value="">Vše</option>
+      <option value="0">Jen nové</option>
+      <option value="1">Zpracované</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="loadFeed(true)">↻ Obnovit</button>
+    <div class="feed-counter">
+      Celkem: <b id="fc-total">—</b> · Nové: <b id="fc-new">—</b>
+    </div>
+  </div>
+
+  <div id="feed-list" class="feed-list">
+    <div class="feed-empty">
+      <div class="empty-icon">📭</div>
+      <p>Žádné novinky. Klikni na <b>Stáhnout novinky</b>.</p>
+    </div>
+  </div>
+
+  <div class="load-more-wrap" id="load-more-wrap" style="display:none">
+    <button class="btn btn-ghost" onclick="loadMore()">Načíst další…</button>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: GitHub -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="page wrap" id="tab-github">
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="sec-header">
+      <div class="card-label" style="margin-bottom:0">Security audit &amp; GitHub Push</div>
+      <span class="badge badge-idle" id="sec-badge">Nespuštěno</span>
+    </div>
+    <div id="sec-results" style="margin-bottom:14px;display:none"></div>
+    <div class="actions">
+      <button class="btn btn-warn" id="btn-scan" onclick="runScan()">🔍 Security Audit</button>
+      <button class="btn btn-primary" id="btn-push" onclick="pushGithub()" disabled>⬆ Push na GitHub</button>
+      <button class="btn btn-ghost" onclick="refreshStatus()">↻ Obnovit</button>
+    </div>
+    <div class="sec-info" id="sec-info">Před každým pushem proběhne automaticky security scan.</div>
+  </div>
+
+  <div class="section-title">🕐 Historie commitů</div>
+  <div class="card">
+    <pre id="commits-gh" style="max-height:260px">Načítám…</pre>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: Session -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="page wrap" id="tab-session">
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-label">💾 Uložit Session &amp; Push</div>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:14px;line-height:1.6">
+      Zjistí co se změnilo, přepíše <code style="color:var(--c);font-size:.77rem">SESSION.md</code>,
+      commitne a pushne na GitHub. Spusť na konci každého session.
+    </p>
+    <div class="field-label">Příští kroky pro nový session (každý na nový řádek):</div>
+    <textarea id="next-steps-text" rows="5"
+      placeholder="Napsat lekci 2: Jak AI myslí&#10;Vytvořit ChatGPT průvodce&#10;Rozšířit prompt knihovnu…"></textarea>
+    <div style="margin-top:12px">
+      <button class="btn btn-green" onclick="saveSession()">💾 Uložit Session &amp; Push</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">📌 Rychlá poznámka</div>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px">
+      Přidá poznámku do SESSION.md bez commitu.</p>
+    <textarea id="note-text" rows="3" placeholder="Co právě řeším… nápad… blocker…"></textarea>
+    <button class="btn btn-ghost" onclick="addNote()" style="margin-top:10px">📌 Přidat poznámku</button>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Clock ──────────────────────────────────────────────────────────────────
+function tick(){
+  const n=new Date();
+  document.getElementById('date-str').textContent=
+    n.toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('time-str').textContent=n.toLocaleTimeString('cs-CZ');
+}
+setInterval(tick,1000);tick();
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg,ok=true){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=ok?'toast-ok':'toast-err';
+  el.style.display='block';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',4500);
+}
+
+// ── API ────────────────────────────────────────────────────────────────────
+async function api(path,data={},method='POST'){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(method!=='GET') opts.body=JSON.stringify(data);
+  const r=await fetch(path,opts);
+  return r.json();
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function showTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const names=['overview','feed','github','session'];
+    t.classList.toggle('active',names[i]===name);
+  });
+  document.querySelectorAll('.page').forEach(p=>{
+    p.classList.toggle('active',p.id===`tab-${name}`);
+  });
+  if(name==='feed') loadFeed(false);
+  if(name==='github'){
+    api('/api/status').then(d=>{
+      document.getElementById('commits-gh').textContent=d.last_commits||'(žádné commity)';
+    });
+  }
+}
+
+// ── Status ─────────────────────────────────────────────────────────────────
+async function refreshStatus(){
+  const d=await api('/api/status');
+  const pct=d.total?Math.round(d.done/d.total*100):0;
+  document.getElementById('stat-done').textContent=d.done;
+  document.getElementById('stat-sub').textContent=`z ${d.total} lekcí dokončeno`;
+  document.getElementById('pbar').style.width=pct+'%';
+  document.getElementById('git-status').textContent=d.git_status;
+  document.getElementById('commits').textContent=d.last_commits;
+  const ul=document.getElementById('next-steps');
+  ul.innerHTML=d.next_steps.length
+    ? d.next_steps.map(s=>`<li>${s}</li>`).join('')
+    : '<li>Viz SESSION.md</li>';
+
+  // feed counters
+  const ft=d.feed_total||0, fn=d.feed_new||0;
+  document.getElementById('stat-feed-total').textContent=ft;
+  document.getElementById('stat-feed-new').textContent=`${fn} nových ke zpracování`;
+  const badge=document.getElementById('feed-badge');
+  if(fn>0){badge.textContent=fn;badge.style.display='inline'}
+  else{badge.style.display='none'}
+  document.getElementById('fc-total').textContent=ft;
+  document.getElementById('fc-new').textContent=fn;
+}
+
+// ── Security ───────────────────────────────────────────────────────────────
+let scanPassed=false;
+async function runScan(){
+  const btn=document.getElementById('btn-scan');
+  const badge=document.getElementById('sec-badge');
+  const info=document.getElementById('sec-info');
+  const results=document.getElementById('sec-results');
+  const pushBtn=document.getElementById('btn-push');
+  btn.innerHTML='<span class="spin"></span> Skenuji…';btn.disabled=true;
+  badge.className='badge badge-idle';badge.textContent='Skenuju…';
+  results.style.display='none';scanPassed=false;pushBtn.disabled=true;
+  const d=await api('/api/security-scan');
+  btn.innerHTML='🔍 Security Audit';btn.disabled=false;results.style.display='block';
+  if(d.ok){
+    badge.className='badge badge-ok';badge.textContent='✓ Čisto';
+    results.innerHTML=`<div class="sec-ok"><span style="font-size:1.3rem">✅</span>
+      Sken dokončen — žádné tajné klíče nenalezeny. Prohledáno ${d.files_scanned} souborů.</div>`;
+    info.textContent='Push je povolen.';scanPassed=true;pushBtn.disabled=false;
+  } else {
+    badge.className='badge badge-warn';badge.textContent=`⚠ ${d.issues.length} problémů`;
+    results.innerHTML=d.issues.map(i=>`
+      <div class="sec-issue">
+        <div class="issue-type">⚠ ${i.type}</div>
+        <div class="issue-file">${i.file}${i.line?` · řádek ${i.line}`:''}</div>
+        ${i.preview?`<div class="issue-preview">${i.preview}</div>`:''}
+      </div>`).join('');
+    info.textContent='Push zablokován. Oprav problémy a spusť sken znovu.';
+    toast(`Security: ${d.issues.length} problémů — oprav je!`,false);
+  }
+}
+
+async function pushGithub(){
+  if(!scanPassed){toast('Nejdříve spusť security scan!',false);return;}
+  const btn=document.getElementById('btn-push');
+  btn.innerHTML='<span class="spin"></span> Pushuji…';btn.disabled=true;
+  const d=await api('/api/push');
+  btn.innerHTML='⬆ Push na GitHub';
+  if(d.ok){
+    scanPassed=false;btn.disabled=true;toast(d.message);refreshStatus();
+    document.getElementById('sec-badge').className='badge badge-idle';
+    document.getElementById('sec-badge').textContent='Nespuštěno';
+    document.getElementById('sec-results').style.display='none';
+    document.getElementById('sec-info').textContent='Před každým pushem proběhne automaticky security scan.';
+    document.getElementById('commits-gh').textContent='Načítám…';
+    api('/api/status').then(d2=>document.getElementById('commits-gh').textContent=d2.last_commits);
+  } else {
+    btn.disabled=false;toast(d.message,false);
+  }
+}
+
+// ── Session ────────────────────────────────────────────────────────────────
+async function saveSession(){
+  const btn=event.target;
+  const next=document.getElementById('next-steps-text').value.trim();
+  btn.innerHTML='<span class="spin"></span> Ukládám…';btn.disabled=true;
+  const d=await api('/api/save-session',{next_steps:next});
+  btn.innerHTML='💾 Uložit Session & Push';btn.disabled=false;
+  toast(d.message,d.ok);
+  if(d.ok){refreshStatus();scanPassed=false;document.getElementById('btn-push').disabled=true;}
+}
+
+async function addNote(){
+  const note=document.getElementById('note-text').value.trim();
+  if(!note){toast('Napiš poznámku nejdřív.',false);return;}
+  const d=await api('/api/add-note',{note});
+  toast(d.message,d.ok);if(d.ok)document.getElementById('note-text').value='';
+}
+
+// ── Feed ───────────────────────────────────────────────────────────────────
+let feedOffset=0;
+const FEED_PAGE=30;
+let feedSources=new Set();
+
+function renderDate(iso){
+  if(!iso) return '';
+  try{
+    return new Date(iso).toLocaleDateString('cs-CZ',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  }catch{return iso.slice(0,10)}
+}
+
+function renderItem(item){
+  const processed=item.processed===1;
+  return `<div class="feed-item${processed?' processed':''}" id="fi-${item.id}">
+    <div>
+      <div class="fi-meta">
+        <span class="fi-source">${item.source}</span>
+        <span class="fi-date">${renderDate(item.published_at||item.fetched_at)}</span>
+        ${!processed?'<span class="fi-new">NOVÉ</span>':''}
+      </div>
+      <div class="fi-title">
+        <a href="${item.url}" target="_blank" rel="noopener">${item.title}</a>
+      </div>
+      ${item.summary?`<div class="fi-summary">${item.summary}</div>`:''}
+    </div>
+    <div class="fi-actions">
+      <button class="btn btn-primary btn-sm" onclick="processItem(${item.id},this)"
+        ${processed?'disabled':''}>
+        ${processed?'✓ Hotovo':'⚙ Zpracovat'}
+      </button>
+      <a href="${item.url}" target="_blank" rel="noopener"
+        class="btn btn-ghost btn-sm">Otevřít →</a>
+    </div>
+  </div>`;
+}
+
+async function loadFeed(reset=true){
+  if(reset) feedOffset=0;
+  const source=document.getElementById('feed-filter-source').value;
+  const processed=document.getElementById('feed-filter-processed').value;
+  let url=`/api/feed?limit=${FEED_PAGE}&offset=${feedOffset}`;
+  if(source) url+=`&source=${encodeURIComponent(source)}`;
+  if(processed!=='') url+=`&processed=${processed}`;
+  const d=await fetch(url).then(r=>r.json());
+  const list=document.getElementById('feed-list');
+  const html=d.items.map(renderItem).join('');
+  if(reset){
+    list.innerHTML=html||`<div class="feed-empty"><div class="empty-icon">📭</div>
+      <p>Žádné novinky. Klikni na <b>Stáhnout novinky</b>.</p></div>`;
+  } else {
+    list.innerHTML+=html;
+  }
+  // Update sources dropdown
+  d.items.forEach(i=>feedSources.add(i.source));
+  updateSourceFilter();
+  // Counters
+  document.getElementById('fc-total').textContent=d.counts.total;
+  document.getElementById('fc-new').textContent=d.counts.new;
+  const badge=document.getElementById('feed-badge');
+  if(d.counts.new>0){badge.textContent=d.counts.new;badge.style.display='inline'}
+  else badge.style.display='none';
+  // Load more
+  const wrap=document.getElementById('load-more-wrap');
+  wrap.style.display=d.items.length===FEED_PAGE?'block':'none';
+  feedOffset+=d.items.length;
+}
+
+function updateSourceFilter(){
+  const sel=document.getElementById('feed-filter-source');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Všechny zdroje</option>';
+  [...feedSources].sort().forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s;o.textContent=s;if(s===cur)o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+function loadMore(){loadFeed(false)}
+
+async function fetchRss(){
+  const btn=document.getElementById('btn-fetch-rss');
+  btn.innerHTML='<span class="spin"></span> Stahuji…';btn.disabled=true;
+  const d=await api('/api/feed/fetch');
+  btn.innerHTML='📡 Stáhnout novinky';btn.disabled=false;
+  toast(d.message,d.ok);
+  if(d.ok) setTimeout(()=>loadFeed(true),3000);
+}
+
+async function processItem(id,btn){
+  btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  // Placeholder — v budoucí fázi zavolá generovací pipeline
+  await new Promise(r=>setTimeout(r,800));
+  toast(`Položka #${id} označena jako zpracovaná (pipeline brzy)`);
+  const el=document.getElementById(`fi-${id}`);
+  if(el){
+    el.classList.add('processed');
+    const newBadge=el.querySelector('.fi-new');
+    if(newBadge)newBadge.remove();
+    btn.textContent='✓ Hotovo';btn.disabled=true;
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+refreshStatus();
+</script>
+</body>
+</html>
