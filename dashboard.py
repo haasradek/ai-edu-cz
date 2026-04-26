@@ -721,6 +721,13 @@ def save_session_full(next_steps_text=''):
     except Exception as e:
         return False, f'Zápis SESSION.md selhal: {e}'
 
+    # Security scan před pushem
+    scan = scan_security()
+    if not scan['ok']:
+        issues = scan['issues']
+        detail = '; '.join(f"{i['type']} ({i['file']})" for i in issues[:3])
+        return False, f'SECURITY BLOK: {len(issues)} problém(ů) — {detail}. Oprav je a zkus znovu.'
+
     # Commit + push
     run_git(['add', '-A'])
     msg = generate_commit_msg() or f'session save [{today}]'
@@ -732,7 +739,7 @@ def save_session_full(next_steps_text=''):
     if code != 0:
         return False, f'SESSION.md uložen lokálně, push selhal: {err}'
 
-    return True, f'Session uložen a pushnut → "{msg}"'
+    return True, f'✓ Security OK · Session uložen · Pushnut → "{msg}"'
 
 
 # ── HTTP Handler ───────────────────────────────────────────────────────────────
