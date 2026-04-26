@@ -152,6 +152,14 @@ Emaily:        Resend free tier (3000/měs)
 4. **Multi-channel:** Každý kus obsahu upravit pro více kanálů
 5. **Konzistence:** Stejný tone of voice napříč platformami
 
+## Bezpečnostní pravidla (neporušitelná)
+
+- **Před každým `git push` musí proběhnout `scan_security()`** — bez výjimky
+- Platí pro všechny cesty: tlačítko Push, Save Session, skripty, agenty, automatizace
+- Pokud scan najde problém → push se zablokuje, dokud není opraveno
+- `.env` soubory nikdy na GitHub — vždy v `.gitignore`
+- API klíče pouze v `.env`, nikdy natvrdo v kódu nebo Markdown souborech
+
 ---
 
 ## Soubory projektu
