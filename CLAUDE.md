@@ -26,16 +26,25 @@ Claude Code (Sonnet 4.6) je **mozkem celé platformy**. Orchestruje ostatní AI 
 
 ## Zapojené AI modely a jejich role
 
-| AI Model | Silná stránka | Využití v projektu |
-|----------|--------------|-------------------|
-| **Claude (Sonnet/Opus)** | Dlouhý kontext, analýza, psaní | Mozek platformy, tvorba obsahu, strategie |
-| **ChatGPT (GPT-4o)** | Všestrannost, plugins, DALL-E | Generování obrázků, alternativní pohledy |
-| **Gemini** | Multimodal, Google ekosystém | Práce s dokumenty, YouTube integrace |
-| **Grok** | Real-time data, X/Twitter | Aktuální AI novinky, Twitter obsah |
-| **Perplexity** | Research, citace zdrojů | Faktické informace, novinky, research |
-| **Midjourney/DALL-E** | Obrázky | Vizuály pro sociální sítě |
-| **ElevenLabs** | TTS, hlasy | Podcasty, YouTube voiceover (free tier) |
-| **Make/n8n** | Automatizace | Workflow automation (n8n je open-source) |
+Projekt využívá celý ekosystém AI nástrojů a platforem — nejen jazykové modely, ale i nástroje pro design, video, audio, automatizaci, hosting a analýzu.
+
+**Kompletní přehled všech platforem:** viz [`strategie/platformy-a-nastroje.md`](strategie/platformy-a-nastroje.md)
+
+### Klíčové nástroje (stručně)
+
+| Kategorie | Primární nástroj | Záložní |
+|-----------|-----------------|---------|
+| **LLM / Mozek** | Claude Code | ChatGPT, Gemini, Grok |
+| **Research** | Perplexity | Tavily, Exa |
+| **Design** | Canva | DALL-E, Leonardo.ai |
+| **Video** | OBS + CapCut | Runway, HeyGen |
+| **Audio** | ElevenLabs | NotebookLM Podcast |
+| **Znalosti** | NotebookLM | Obsidian + AI |
+| **Automatizace** | n8n (self-hosted) | Make.com |
+| **AI Agenti** | Claude API + CrewAI | LangChain, Flowise |
+| **Vektorová DB** | Pinecone | Chroma, Supabase |
+| **Hosting** | Vercel | GitHub Pages |
+| **Newsletter** | Beehiiv | Substack |
 
 ---
 
