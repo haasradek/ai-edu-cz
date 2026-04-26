@@ -1,10 +1,68 @@
+# ── Tajné soubory — NIKDY na GitHub ─────────────────────
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.*.local
+
+# Klíče a certifikáty
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+secrets.json
+secrets.yaml
+secrets.yml
+credentials.json
+service-account.json
+*_rsa
+*_dsa
+*_ecdsa
+*_ed25519
+
+# ── Python ───────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
-.env
-.DS_Store
-Thumbs.db
-*.log
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# ── Node / Web ───────────────────────────────────────────
 node_modules/
 .astro/
+.next/
+.nuxt/
 dist/
+out/
+.cache/
+*.tsbuildinfo
+
+# ── OS soubory ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+
+# ── Logy ─────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+
+# ── Databáze (lokální) ───────────────────────────────────
+*.sqlite
+*.db
+
+# ── IDE ──────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.suo
+*.user
