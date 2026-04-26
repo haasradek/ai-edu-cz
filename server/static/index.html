@@ -44,6 +44,62 @@ header{
 #clock{font-size:.78rem;color:var(--muted);text-align:right}
 #clock b{display:block;font-size:.95rem;color:var(--txt);font-variant-numeric:tabular-nums}
 
+/* ── System status ── */
+#sys-status{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  user-select:none;
+}
+.status-ring{
+  position:relative;width:48px;height:48px;
+}
+.status-ring svg{width:48px;height:48px;transform:rotate(-90deg)}
+.status-ring .ring-bg{fill:none;stroke:rgba(255,255,255,.06);stroke-width:3}
+.status-ring .ring-fg{
+  fill:none;stroke-width:3;stroke-linecap:round;
+  stroke-dasharray:120;stroke-dashoffset:120;
+  transition:stroke .4s, stroke-dashoffset .4s;
+}
+.status-dot{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+}
+.status-dot-inner{
+  width:14px;height:14px;border-radius:50%;
+  transition:background .4s, box-shadow .4s;
+}
+
+/* idle */
+.s-idle .ring-fg{stroke:var(--c3);stroke-dashoffset:0}
+.s-idle .status-dot-inner{
+  background:var(--c3);
+  box-shadow:0 0 0 0 rgba(0,255,136,.5);
+  animation:dot-pulse 2.4s ease-in-out infinite;
+}
+@keyframes dot-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.5)}
+  50%{box-shadow:0 0 0 6px rgba(0,255,136,0)}
+}
+
+/* running */
+.s-running .ring-fg{stroke:var(--yellow);stroke-dasharray:40 80;animation:ring-spin 1.2s linear infinite}
+.s-running .status-dot-inner{background:var(--yellow);box-shadow:0 0 10px rgba(255,170,0,.6)}
+@keyframes ring-spin{to{stroke-dashoffset:-120}}
+
+/* error */
+.s-error .ring-fg{stroke:var(--red);stroke-dashoffset:0}
+.s-error .status-dot-inner{
+  background:var(--red);box-shadow:0 0 10px rgba(255,51,85,.7);
+  animation:dot-err .6s ease-in-out infinite alternate;
+}
+@keyframes dot-err{from{opacity:1}to{opacity:.4}}
+
+.status-label{
+  font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  transition:color .4s;white-space:nowrap;
+}
+.s-idle  .status-label{color:var(--c3)}
+.s-running .status-label{color:var(--yellow)}
+.s-error .status-label{color:var(--red)}
+
 /* ── Nav tabs ── */
 nav{
   display:flex;gap:4px;padding:0 32px;
@@ -211,6 +267,25 @@ select option{background:#111}
   background:rgba(0,255,136,.12);color:var(--c3);border:1px solid rgba(0,255,136,.2);
 }
 
+/* ── Topic tags ── */
+.fi-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.fi-tag{
+  font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:99px;
+  letter-spacing:.03em;
+}
+.tag-claude    {background:rgba(255,140,0,.15);color:#ffaa40;border:1px solid rgba(255,140,0,.25)}
+.tag-chatgpt   {background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.tag-gemini    {background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.25)}
+.tag-grok      {background:rgba(255,255,255,.08);color:#e5e7eb;border:1px solid rgba(255,255,255,.15)}
+.tag-llama     {background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.25)}
+.tag-copilot   {background:rgba(14,165,233,.15);color:#38bdf8;border:1px solid rgba(14,165,233,.25)}
+.tag-mistral   {background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.25)}
+.tag-perplexity{background:rgba(20,184,166,.15);color:#2dd4bf;border:1px solid rgba(20,184,166,.25)}
+.tag-midjourney{background:rgba(236,72,153,.15);color:#f472b6;border:1px solid rgba(236,72,153,.25)}
+.tag-sora      {background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.25)}
+.tag-llm       {background:rgba(156,163,175,.1);color:#9ca3af;border:1px solid rgba(156,163,175,.2)}
+.tag-agenti    {background:rgba(0,212,255,.12);color:var(--c);border:1px solid rgba(0,212,255,.22)}
+
 .fi-title{
   font-size:.93rem;font-weight:600;line-height:1.4;
   color:var(--txt);margin-bottom:5px;
@@ -232,6 +307,15 @@ select option{background:#111}
 .feed-empty .empty-icon{font-size:2.5rem;margin-bottom:12px}
 .feed-empty p{font-size:.84rem;margin-bottom:16px}
 
+/* ── Tag filter bar ── */
+.tag-filter-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tag-filter-bar .fi-tag{
+  cursor:pointer;opacity:.55;transition:opacity .15s, box-shadow .15s;
+  font-size:.68rem;padding:3px 10px;
+}
+.tag-filter-bar .fi-tag:hover{opacity:.85}
+.tag-filter-bar .fi-tag.active{opacity:1;box-shadow:0 0 0 2px currentColor}
+
 /* ── Load more ── */
 .load-more-wrap{text-align:center;margin-top:18px}
 
@@ -252,6 +336,18 @@ select option{background:#111}
       <p>Mission Control Dashboard</p>
     </div>
   </div>
+
+  <div id="sys-status" class="s-idle">
+    <div class="status-ring">
+      <svg viewBox="0 0 48 48">
+        <circle class="ring-bg" cx="24" cy="24" r="19"/>
+        <circle class="ring-fg" cx="24" cy="24" r="19"/>
+      </svg>
+      <div class="status-dot"><div class="status-dot-inner"></div></div>
+    </div>
+    <div class="status-label" id="status-label">System OK</div>
+  </div>
+
   <div id="clock"><span id="date-str"></span><b id="time-str"></b></div>
 </header>
 
@@ -323,6 +419,8 @@ select option{background:#111}
       Celkem: <b id="fc-total">—</b> · Nové: <b id="fc-new">—</b>
     </div>
   </div>
+
+  <div class="tag-filter-bar" id="tag-filter-bar"></div>
 
   <div id="feed-list" class="feed-list">
     <div class="feed-empty">
@@ -404,6 +502,39 @@ function tick(){
 }
 setInterval(tick,1000);tick();
 
+// ── System status ──────────────────────────────────────────────────────────
+const Status = {
+  _el: null, _label: null, _timer: null,
+  _init(){
+    if(this._el) return;
+    this._el    = document.getElementById('sys-status');
+    this._label = document.getElementById('status-label');
+  },
+  _set(state, text){
+    this._init();
+    this._el.className = `s-${state}`;
+    this._label.textContent = text;
+  },
+  idle(text='System OK'){
+    clearTimeout(this._timer);
+    this._set('idle', text);
+  },
+  running(text='Running…'){
+    clearTimeout(this._timer);
+    this._set('running', text);
+  },
+  error(text='Chyba', duration=6000){
+    clearTimeout(this._timer);
+    this._set('error', text);
+    if(duration) this._timer = setTimeout(()=>this.idle(), duration);
+  },
+  ok(text='Hotovo', duration=3000){
+    clearTimeout(this._timer);
+    this._set('idle', text);
+    if(duration) this._timer = setTimeout(()=>this.idle(), duration);
+  }
+};
+
 // ── Toast ──────────────────────────────────────────────────────────────────
 function toast(msg,ok=true){
   const el=document.getElementById('toast');
@@ -429,7 +560,7 @@ function showTab(name){
   document.querySelectorAll('.page').forEach(p=>{
     p.classList.toggle('active',p.id===`tab-${name}`);
   });
-  if(name==='feed') loadFeed(false);
+  if(name==='feed') loadFeed(true);
   if(name==='github'){
     api('/api/status').then(d=>{
       document.getElementById('commits-gh').textContent=d.last_commits||'(žádné commity)';
@@ -473,6 +604,7 @@ async function runScan(){
   btn.innerHTML='<span class="spin"></span> Skenuji…';btn.disabled=true;
   badge.className='badge badge-idle';badge.textContent='Skenuju…';
   results.style.display='none';scanPassed=false;pushBtn.disabled=true;
+  Status.running('Security scan…');
   const d=await api('/api/security-scan');
   btn.innerHTML='🔍 Security Audit';btn.disabled=false;results.style.display='block';
   if(d.ok){
@@ -480,6 +612,7 @@ async function runScan(){
     results.innerHTML=`<div class="sec-ok"><span style="font-size:1.3rem">✅</span>
       Sken dokončen — žádné tajné klíče nenalezeny. Prohledáno ${d.files_scanned} souborů.</div>`;
     info.textContent='Push je povolen.';scanPassed=true;pushBtn.disabled=false;
+    Status.ok('Scan OK');
   } else {
     badge.className='badge badge-warn';badge.textContent=`⚠ ${d.issues.length} problémů`;
     results.innerHTML=d.issues.map(i=>`
@@ -490,6 +623,7 @@ async function runScan(){
       </div>`).join('');
     info.textContent='Push zablokován. Oprav problémy a spusť sken znovu.';
     toast(`Security: ${d.issues.length} problémů — oprav je!`,false);
+    Status.error(`${d.issues.length} security problém${d.issues.length>1?'y':''}`);
   }
 }
 
@@ -497,6 +631,7 @@ async function pushGithub(){
   if(!scanPassed){toast('Nejdříve spusť security scan!',false);return;}
   const btn=document.getElementById('btn-push');
   btn.innerHTML='<span class="spin"></span> Pushuji…';btn.disabled=true;
+  Status.running('Push na GitHub…');
   const d=await api('/api/push');
   btn.innerHTML='⬆ Push na GitHub';
   if(d.ok){
@@ -507,8 +642,10 @@ async function pushGithub(){
     document.getElementById('sec-info').textContent='Před každým pushem proběhne automaticky security scan.';
     document.getElementById('commits-gh').textContent='Načítám…';
     api('/api/status').then(d2=>document.getElementById('commits-gh').textContent=d2.last_commits);
+    Status.ok('Push hotov');
   } else {
     btn.disabled=false;toast(d.message,false);
+    Status.error('Push selhal');
   }
 }
 
@@ -517,10 +654,16 @@ async function saveSession(){
   const btn=event.target;
   const next=document.getElementById('next-steps-text').value.trim();
   btn.innerHTML='<span class="spin"></span> Ukládám…';btn.disabled=true;
+  Status.running('Ukládám session…');
   const d=await api('/api/save-session',{next_steps:next});
   btn.innerHTML='💾 Uložit Session & Push';btn.disabled=false;
   toast(d.message,d.ok);
-  if(d.ok){refreshStatus();scanPassed=false;document.getElementById('btn-push').disabled=true;}
+  if(d.ok){
+    refreshStatus();scanPassed=false;document.getElementById('btn-push').disabled=true;
+    Status.ok('Session uložena');
+  } else {
+    Status.error('Session se neuložila');
+  }
 }
 
 async function addNote(){
@@ -534,12 +677,59 @@ async function addNote(){
 let feedOffset=0;
 const FEED_PAGE=30;
 let feedSources=new Set();
+let activeTag=null;
+
+const ALL_TAGS=[
+  {key:'Claude',    cls:'tag-claude'},
+  {key:'ChatGPT',   cls:'tag-chatgpt'},
+  {key:'Gemini',    cls:'tag-gemini'},
+  {key:'Grok',      cls:'tag-grok'},
+  {key:'Llama',     cls:'tag-llama'},
+  {key:'Copilot',   cls:'tag-copilot'},
+  {key:'Mistral',   cls:'tag-mistral'},
+  {key:'Perplexity',cls:'tag-perplexity'},
+  {key:'Agenti',    cls:'tag-agenti'},
+  {key:'LLM',       cls:'tag-llm'},
+];
+
+function renderTagFilterBar(){
+  const bar=document.getElementById('tag-filter-bar');
+  bar.innerHTML=ALL_TAGS.map(t=>
+    `<span class="fi-tag ${t.cls}${activeTag===t.key?' active':''}"
+      onclick="toggleTagFilter('${t.key}')">${t.key}</span>`
+  ).join('');
+}
+
+function toggleTagFilter(tag){
+  activeTag = activeTag===tag ? null : tag;
+  renderTagFilterBar();
+  loadFeed(true);
+}
 
 function renderDate(iso){
   if(!iso) return '';
   try{
     return new Date(iso).toLocaleDateString('cs-CZ',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   }catch{return iso.slice(0,10)}
+}
+
+const TAG_CLASSES = {
+  'claude':'tag-claude','chatgpt':'tag-chatgpt','gemini':'tag-gemini',
+  'grok':'tag-grok','llama':'tag-llama','copilot':'tag-copilot',
+  'mistral':'tag-mistral','perplexity':'tag-perplexity',
+  'midjourney':'tag-midjourney','sora':'tag-sora',
+  'llm':'tag-llm','agenti':'tag-agenti'
+};
+
+function renderTags(tagsJson){
+  let tags=[];
+  try{ tags=JSON.parse(tagsJson||'[]'); }catch{}
+  if(!tags.length) return '';
+  const badges=tags.map(t=>{
+    const cls=TAG_CLASSES[t.toLowerCase()]||'tag-llm';
+    return `<span class="fi-tag ${cls}">${t}</span>`;
+  }).join('');
+  return `<div class="fi-tags">${badges}</div>`;
 }
 
 function renderItem(item){
@@ -555,6 +745,7 @@ function renderItem(item){
         <a href="${item.url}" target="_blank" rel="noopener">${item.title}</a>
       </div>
       ${item.summary?`<div class="fi-summary">${item.summary}</div>`:''}
+      ${renderTags(item.tags)}
     </div>
     <div class="fi-actions">
       <button class="btn btn-primary btn-sm" onclick="processItem(${item.id},this)"
@@ -574,6 +765,7 @@ async function loadFeed(reset=true){
   let url=`/api/feed?limit=${FEED_PAGE}&offset=${feedOffset}`;
   if(source) url+=`&source=${encodeURIComponent(source)}`;
   if(processed!=='') url+=`&processed=${processed}`;
+  if(activeTag) url+=`&tag=${encodeURIComponent(activeTag)}`;
   const d=await fetch(url).then(r=>r.json());
   const list=document.getElementById('feed-list');
   const html=d.items.map(renderItem).join('');
@@ -614,10 +806,26 @@ function loadMore(){loadFeed(false)}
 async function fetchRss(){
   const btn=document.getElementById('btn-fetch-rss');
   btn.innerHTML='<span class="spin"></span> Stahuji…';btn.disabled=true;
+  Status.running('RSS agent běží…');
+
   const d=await api('/api/feed/fetch');
-  btn.innerHTML='📡 Stáhnout novinky';btn.disabled=false;
-  toast(d.message,d.ok);
-  if(d.ok) setTimeout(()=>loadFeed(true),3000);
+  if(!d.ok){ btn.innerHTML='📡 Stáhnout novinky';btn.disabled=false;Status.error('RSS fetch selhal');return; }
+
+  // Zjisti aktuální počet, pak poll dokud nenaroste
+  const countBefore = parseInt(document.getElementById('fc-total').textContent)||0;
+  let waited=0;
+  const poll=setInterval(async()=>{
+    waited+=2;
+    const r=await fetch('/api/feed?limit=1').then(x=>x.json());
+    const now=r.counts.total;
+    if(now>countBefore || waited>=40){
+      clearInterval(poll);
+      btn.innerHTML='📡 Stáhnout novinky';btn.disabled=false;
+      await loadFeed(true);
+      Status.ok(`Feed OK — ${now} článků`);
+      toast(`Hotovo — ${now} článků v DB`, true);
+    }
+  },2000);
 }
 
 async function processItem(id,btn){
@@ -636,6 +844,7 @@ async function processItem(id,btn){
 
 // ── Init ───────────────────────────────────────────────────────────────────
 refreshStatus();
+renderTagFilterBar();
 </script>
 </body>
 </html>

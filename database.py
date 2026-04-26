@@ -86,7 +86,8 @@ def upsert_item(url: str, title: str, source: str,
 
 
 def get_items(limit: int = 50, offset: int = 0,
-              source: str = None, processed: int = None) -> list[dict]:
+              source: str = None, processed: int = None,
+              tag: str = None) -> list[dict]:
     with get_db() as conn:
         q = "SELECT * FROM items WHERE 1=1"
         params = []
@@ -94,7 +95,9 @@ def get_items(limit: int = 50, offset: int = 0,
             q += " AND source = ?"; params.append(source)
         if processed is not None:
             q += " AND processed = ?"; params.append(processed)
-        q += " ORDER BY fetched_at DESC LIMIT ? OFFSET ?"
+        if tag:
+            q += ' AND tags LIKE ?'; params.append(f'%"{tag}"%')
+        q += " ORDER BY COALESCE(published_at, fetched_at) DESC LIMIT ? OFFSET ?"
         params += [limit, offset]
         rows = conn.execute(q, params).fetchall()
         return [dict(r) for r in rows]

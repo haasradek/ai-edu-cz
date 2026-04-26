@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 AI-EDU-CZ — RSS Agent
-Stahuje novinky ze svobodných RSS feedů a ukládá do SQLite DB.
-Spusti: python agenti/rss_agent.py
+Stahuje AI novinky, detekuje témata (tagy), ukládá do SQLite DB.
 """
 
+import re
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -14,29 +14,87 @@ import trafilatura
 from datetime import datetime, timezone
 from database import init_db, upsert_item
 
-# ── Seznam RSS feedů (všechny zdarma) ────────────────────────────────────────
+# ── Feedy ─────────────────────────────────────────────────────────────────────
 
 FEEDS = [
-    # Anglické AI zdroje
-    {"url": "https://www.anthropic.com/rss.xml",               "source": "Anthropic Blog"},
-    {"url": "https://openai.com/news/rss.xml",                 "source": "OpenAI Blog"},
-    {"url": "https://techcrunch.com/category/artificial-intelligence/feed/", "source": "TechCrunch AI"},
-    {"url": "https://venturebeat.com/category/ai/feed/",       "source": "VentureBeat AI"},
-    {"url": "https://hnrss.org/newest?q=LLM+AI+Claude+ChatGPT&points=10", "source": "HackerNews AI"},
-    {"url": "https://www.theverge.com/ai-artificial-intelligence/rss/index.xml", "source": "The Verge AI"},
-    # České / slovenské zdroje
-    {"url": "https://news.google.com/rss/search?q=umela+inteligence&hl=cs&gl=CZ&ceid=CZ:cs", "source": "Google News CZ"},
-    {"url": "https://news.google.com/rss/search?q=AI+umela+inteligencia&hl=sk&gl=SK&ceid=SK:sk", "source": "Google News SK"},
-    {"url": "https://www.lupa.cz/rss/clanky/",                "source": "Lupa.cz"},
-    {"url": "https://www.root.cz/rss/clanky/",               "source": "Root.cz"},
+    {"url": "https://www.anthropic.com/blog/rss",
+     "source": "Anthropic Blog"},
+    {"url": "https://openai.com/news/rss.xml",
+     "source": "OpenAI Blog",       "filter_ai": True},
+    {"url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+     "source": "TechCrunch AI"},
+    {"url": "https://venturebeat.com/category/ai/feed/",
+     "source": "VentureBeat AI"},
+    {"url": "https://hnrss.org/newest?q=AI+LLM+ChatGPT+Claude&points=15",
+     "source": "HackerNews AI"},
+    {"url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+     "source": "The Verge AI"},
+    {"url": "https://news.google.com/rss/search?q=%22um%C4%9Bl%C3%A1+inteligence%22+OR+%22ChatGPT%22+OR+%22Claude%22+OR+%22Gemini%22&hl=cs&gl=CZ&ceid=CZ:cs",
+     "source": "Google News CZ"},
+    {"url": "https://news.google.com/rss/search?q=%22umel%C3%A1+inteligencia%22+OR+%22ChatGPT%22+OR+%22Claude%22+OR+%22Gemini%22&hl=sk&gl=SK&ceid=SK:sk",
+     "source": "Google News SK"},
+    {"url": "https://www.lupa.cz/rss/clanky/",
+     "source": "Lupa.cz",           "filter_ai": True},
+    {"url": "https://www.root.cz/rss/clanky/",
+     "source": "Root.cz",           "filter_ai": True},
 ]
 
-MAX_PER_FEED = 20  # max článků z jednoho feedu na jedno spuštění
-FETCH_FULLTEXT = False  # True = pomalejší, ale máme plný text přes trafilatura
+MAX_PER_FEED = 25
+FETCH_FULLTEXT = False
+
+# ── Filtrovací klíčová slova (musí být aspoň jedno) ───────────────────────────
+
+AI_KEYWORDS = [
+    "ChatGPT", "Claude", "Gemini", "Grok", "Llama", "Copilot", "Mistral",
+    "GPT-4", "GPT-4o", "o1", "o3", "Sora", "Midjourney", "DALL-E",
+    "Anthropic", "OpenAI", "Google DeepMind", "Meta AI", "xAI",
+    "LLM", "large language model", "velký jazykový model",
+    "AI agent", "AI agenti", "generativní AI", "generative AI",
+    "umělá inteligence", "umelá inteligencia",
+    "machine learning", "strojové učení",
+    "neural network", "neuronová síť",
+    "prompt", "fine-tuning", "RAG", "vector database",
+]
+
+_AI_RE = re.compile(
+    "|".join(r"\b" + re.escape(k) + r"\b" for k in AI_KEYWORDS),
+    re.IGNORECASE
+)
+
+# ── Tagy — co konkrétně je v článku zmíněno ───────────────────────────────────
+
+TAG_RULES = [
+    ("Claude",      ["claude", "anthropic", "claude code", "claude cowork",
+                     "claude opus", "claude sonnet", "claude haiku"]),
+    ("ChatGPT",     ["chatgpt", "openai", "gpt-4", "gpt-4o", "gpt4", "o1 ", "o3 ",
+                     "sora", "dall-e", "whisper"]),
+    ("Gemini",      ["gemini", "google deepmind", "google ai", "bard", "google gemma",
+                     "notebooklm"]),
+    ("Grok",        ["grok", "xai", "x.ai"]),
+    ("Llama",       ["llama", "meta ai", "meta llama"]),
+    ("Copilot",     ["copilot", "github copilot", "microsoft ai", "bing ai"]),
+    ("Mistral",     ["mistral"]),
+    ("Perplexity",  ["perplexity"]),
+    ("Midjourney",  ["midjourney"]),
+    ("Sora",        ["sora"]),
+    ("LLM",         ["large language model", "velký jazykový model", "llm"]),
+    ("Agenti",      ["ai agent", "ai agenti", "multi-agent", "agentic"]),
+]
+
+def detect_tags(title: str, summary: str) -> list[str]:
+    text = (title + " " + summary).lower()
+    tags = []
+    for tag, keywords in TAG_RULES:
+        if any(kw in text for kw in keywords):
+            tags.append(tag)
+    return tags
+
+
+def _is_ai_relevant(title: str, summary: str) -> bool:
+    return bool(_AI_RE.search(title) or _AI_RE.search(summary))
 
 
 def _parse_date(entry) -> str | None:
-    """Vrátí ISO datum z feedparser entry."""
     t = entry.get("published_parsed") or entry.get("updated_parsed")
     if t:
         try:
@@ -47,7 +105,6 @@ def _parse_date(entry) -> str | None:
 
 
 def _fetch_fulltext(url: str) -> str | None:
-    """Stáhne plný text článku přes trafilatura (zdarma)."""
     try:
         downloaded = trafilatura.fetch_url(url)
         if downloaded:
@@ -59,28 +116,32 @@ def _fetch_fulltext(url: str) -> str | None:
 
 
 def run(verbose: bool = True) -> dict:
-    """
-    Projde všechny RSS feedy, uloží nové položky do DB.
-    Vrátí {'fetched': int, 'new': int, 'sources': list}.
-    """
     init_db()
     total_fetched = 0
     total_new = 0
+    total_skipped = 0
     source_stats = []
 
     for feed_cfg in FEEDS:
-        feed_url = feed_cfg["url"]
-        source   = feed_cfg["source"]
+        feed_url  = feed_cfg["url"]
+        source    = feed_cfg["source"]
+        filter_ai = feed_cfg.get("filter_ai", False)
 
         try:
             parsed = feedparser.parse(feed_url)
         except Exception as e:
             if verbose:
-                print(f"  ✗ {source}: chyba parsování — {e}")
+                print(f"  x {source}: chyba — {e}")
             continue
 
-        entries = parsed.entries[:MAX_PER_FEED]
-        new_count = 0
+        if not parsed.entries:
+            if verbose:
+                print(f"  - {source}: zadne polozky (HTTP {parsed.get('status','?')})")
+            continue
+
+        entries    = parsed.entries[:MAX_PER_FEED]
+        new_count  = 0
+        skip_count = 0
 
         for entry in entries:
             url   = entry.get("link", "").strip()
@@ -89,38 +150,46 @@ def run(verbose: bool = True) -> dict:
                 continue
 
             summary = entry.get("summary", "") or entry.get("description", "") or ""
-            # Odstraň HTML tagy ze summary
-            import re
             summary = re.sub(r"<[^>]+>", "", summary).strip()[:500]
 
+            if filter_ai and not _is_ai_relevant(title, summary):
+                skip_count += 1
+                continue
+
             published_at = _parse_date(entry)
-            content = _fetch_fulltext(url) if FETCH_FULLTEXT else None
+            tags         = detect_tags(title, summary)
+            content      = _fetch_fulltext(url) if FETCH_FULLTEXT else None
 
             item_id = upsert_item(
-                url=url,
-                title=title,
-                source=source,
-                published_at=published_at,
-                content=content,
-                summary=summary,
+                url=url, title=title, source=source,
+                published_at=published_at, content=content,
+                summary=summary, tags=tags,
             )
             if item_id:
                 new_count += 1
 
-        total_fetched += len(entries)
-        total_new += new_count
-        source_stats.append({"source": source, "fetched": len(entries), "new": new_count})
+        total_fetched  += len(entries)
+        total_new      += new_count
+        total_skipped  += skip_count
+        source_stats.append({"source": source, "fetched": len(entries),
+                              "new": new_count, "skipped": skip_count})
 
         if verbose:
-            status = f"+{new_count} nových" if new_count else "vše již uloženo"
-            print(f"  {'✓' if new_count else '·'} {source}: {len(entries)} položek, {status}")
+            parts = [f"+{new_count} novych"]
+            if skip_count:
+                parts.append(f"{skip_count} preskoceno")
+            if new_count == 0 and skip_count == 0:
+                parts = ["vse jiz ulozeno"]
+            print(f"  {'+'if new_count else '.'} {source}: {', '.join(parts)}")
 
     if verbose:
-        print(f"\n  Celkem: {total_fetched} načteno, {total_new} nových uloženo do DB")
+        print(f"\n  Celkem: {total_fetched} stazeno, {total_new} novych, "
+              f"{total_skipped} preskoceno")
 
-    return {"fetched": total_fetched, "new": total_new, "sources": source_stats}
+    return {"fetched": total_fetched, "new": total_new,
+            "skipped": total_skipped, "sources": source_stats}
 
 
 if __name__ == "__main__":
-    print("\n🤖 AI-EDU-CZ RSS Agent\n")
+    print("AI-EDU-CZ RSS Agent\n")
     run(verbose=True)

@@ -34,7 +34,10 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 def index():
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(
+        STATIC_DIR / "index.html",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"}
+    )
 
 
 # ── Security ──────────────────────────────────────────────────────────────────
@@ -295,10 +298,10 @@ def api_add_note(body: NoteBody):
 
 @app.get("/api/feed")
 def api_feed(limit: int = 50, offset: int = 0,
-             source: str = None, processed: int = None):
-    items = db.get_items(limit=limit, offset=offset,
-                         source=source,
-                         processed=processed if processed is not None else None)
+             source: str = None, processed: int = None, tag: str = None):
+    items = db.get_items(limit=limit, offset=offset, source=source,
+                         processed=processed if processed is not None else None,
+                         tag=tag or None)
     counts = db.count_items()
     return {'items': items, 'counts': counts}
 
