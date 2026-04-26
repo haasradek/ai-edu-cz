@@ -31,12 +31,22 @@ SECRET_PATTERNS = [
     (r'-----BEGIN [A-Z ]+ PRIVATE KEY-----',               'Privátní klíč (PEM)'),
 ]
 
-DANGEROUS_FILENAMES = {'.env', '.env.local', '.env.production', '.env.development',
-                       'credentials.json', 'secrets.json', 'service-account.json'}
+# Soubory určené pro tajné klíče — kontrolujeme jen gitignore, NE obsah
+ENV_FILENAMES = {'.env', '.env.local', '.env.production', '.env.development',
+                 '.env.staging', '.env.test'}
+
+# Ostatní nebezpečné soubory — kontrolujeme gitignore i obsah
+DANGEROUS_FILENAMES = {'credentials.json', 'secrets.json', 'service-account.json'}
 
 SKIP_DIRS  = {'.git', '__pycache__', 'node_modules', '.astro', 'dist', '.venv', 'venv'}
 SKIP_EXTS  = {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip',
               '.mp4', '.mp3', '.wav', '.ttf', '.woff', '.woff2', '.pyc'}
+
+
+def _is_gitignored(rel_path):
+    r = subprocess.run(['git', 'check-ignore', '-q', str(rel_path)],
+                       cwd=PROJECT_ROOT, capture_output=True)
+    return r.returncode == 0
 
 
 def scan_security():
@@ -49,11 +59,17 @@ def scan_security():
             fpath = Path(root) / fname
             rel = fpath.relative_to(PROJECT_ROOT)
 
+            # .env soubory: správné místo pro klíče — jen zkontroluj gitignore
+            if fname in ENV_FILENAMES:
+                if not _is_gitignored(rel):
+                    issues.append({'file': str(rel), 'line': 0,
+                                   'type': f'⚠ {fname} není v .gitignore — klíče by šly na GitHub!',
+                                   'preview': 'Přidej do .gitignore'})
+                continue  # obsah .env neskenujeme — klíče tam patří
+
+            # Ostatní nebezpečné soubory
             if fname in DANGEROUS_FILENAMES:
-                # Check if properly gitignored
-                r = subprocess.run(['git', 'check-ignore', '-q', str(rel)],
-                                   cwd=PROJECT_ROOT, capture_output=True)
-                if r.returncode != 0:
+                if not _is_gitignored(rel):
                     issues.append({'file': str(rel), 'line': 0,
                                    'type': 'Nebezpečný soubor není v .gitignore',
                                    'preview': fname})
