@@ -20,8 +20,9 @@
 - Vytvořena prompt knihovna: emailové šablony
 - Vytvořena Twitter thread šablona
 - Vytvořen dashboard systém (SESSION.md, PROGRESS.md, dashboard.py)
-- Inicializován git repozitář
-- Připojen GitHub repozitář
+- Inicializován git repozitář (master branch)
+- Vytvořen GitHub repozitář: https://github.com/haasradek/ai-edu-cz
+- Proveden první push (HTTPS, uživatel haasradek)
 
 ---
 
