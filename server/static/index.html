@@ -428,12 +428,21 @@ select option{background:#111}
 .result-tab{
   padding:7px 16px;border-radius:8px;border:1px solid var(--border);
   font-size:.78rem;font-weight:600;cursor:pointer;color:var(--muted);
-  transition:all .15s;
+  transition:all .15s;background:none;
 }
 .result-tab:hover{color:var(--txt);border-color:var(--border2)}
 .result-tab.active{
   background:rgba(0,212,255,.12);color:var(--c);
   border-color:rgba(0,212,255,.3);
+}
+/* Label (ne tab) — neklikatelný, použij když je jen 1 platforma */
+.result-label{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;border-radius:8px;
+  font-size:.78rem;font-weight:600;
+  background:rgba(0,212,255,.1);color:var(--c);
+  border:1px solid rgba(0,212,255,.25);
+  cursor:default;pointer-events:none;user-select:none;
 }
 .result-panel{display:none}
 .result-panel.active{display:block}
@@ -1194,35 +1203,48 @@ async function generateContent(){
 }
 
 function _showResults(byType){
+  // Vždy zobrazí titulek "Vygenerovaný obsah"
+  document.getElementById('modal-title').textContent = 'Vygenerovaný obsah';
+
   const tabs    = document.getElementById('result-tabs');
   const panels  = document.getElementById('result-panels');
   const types   = Object.keys(byType);
 
-  tabs.innerHTML = types.map((t,i)=>`
-    <button class="result-tab${i===0?' active':''}" id="rtab-${t}"
-      onclick="switchResultTab('${t}')">${PLATFORM_META[t]?.icon||''} ${PLATFORM_META[t]?.label||t}
-    </button>`).join('');
+  // Jedna platforma → jen label (neklikatelný). Více → přepínací taby.
+  if(types.length === 1){
+    const t = types[0];
+    const m = PLATFORM_META[t] || {};
+    tabs.innerHTML = `<span class="result-label">${m.icon||''} ${m.label||t}</span>`;
+  } else {
+    tabs.innerHTML = types.map((t,i)=>`
+      <button class="result-tab${i===0?' active':''}" id="rtab-${t}"
+        onclick="switchResultTab('${t}')">${PLATFORM_META[t]?.icon||''} ${PLATFORM_META[t]?.label||t}
+      </button>`).join('');
+  }
 
   panels.innerHTML = types.map((t,i)=>{
-    const item  = byType[t];
-    const genId = item.id || item.generated_id || '';
+    const item       = byType[t];
+    const genId      = item.id || item.generated_id || '';
+    const published  = !!item.published_url;
+    const pubUrl     = item.published_url || '';
     return `
     <div class="result-panel${i===0?' active':''}" id="rpanel-${t}">
-      <textarea class="result-content" id="rcontent-${t}" spellcheck="false">${escHtml(item.content)}</textarea>
+      <textarea class="result-content" id="rcontent-${t}" spellcheck="false"
+        ${published ? 'readonly style="opacity:.7;cursor:default"' : ''}>${escHtml(item.content)}</textarea>
       <div class="result-actions">
         <button class="btn btn-ghost btn-sm" onclick="copyResult('${t}')">📋 Kopírovat</button>
-        ${genId ? `<button class="btn btn-green btn-sm" onclick="saveEdits('${t}',${genId})">💾 Uložit úpravy</button>` : ''}
+        ${(genId && !published) ? `<button class="btn btn-green btn-sm" onclick="saveEdits('${t}',${genId})">💾 Uložit úpravy</button>` : ''}
         ${(t==='article' && genId) ? (
-          item.published_url
-            ? `<span style="font-size:.78rem;color:var(--c3);display:flex;align-items:center;gap:6px;">
+          published
+            ? `<span style="font-size:.78rem;color:var(--c3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                 ✓ Publikováno →
-                <a href="${item.published_url}" target="_blank" style="color:var(--c)">${item.published_url}</a>
+                <a href="${pubUrl}" target="_blank" style="color:var(--c)">${pubUrl}</a>
                </span>`
             : `<button class="btn btn-primary btn-sm" id="btnpub-${genId}" onclick="publishArticle('${t}',${genId})">🌐 Publikovat na hugoai.cz</button>`
         ) : ''}
-        <span class="copy-ok"  id="copyok-${t}">✓ Zkopírováno!</span>
-        <span class="save-ok"  id="saveok-${t}">✓ Uloženo!</span>
-        <span class="pub-ok"   id="pubok-${genId}" style="display:none;font-size:.75rem;color:var(--c)"></span>
+        <span class="copy-ok" id="copyok-${t}">✓ Zkopírováno!</span>
+        <span class="save-ok" id="saveok-${t}">✓ Uloženo!</span>
+        <span class="pub-ok"  id="pubok-${genId}" style="display:none;font-size:.75rem;color:var(--c)"></span>
       </div>
     </div>`;
   }).join('');
