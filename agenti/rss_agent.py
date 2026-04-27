@@ -40,7 +40,7 @@ FEEDS = [
 ]
 
 MAX_PER_FEED = 25
-FETCH_FULLTEXT = True   # stáhne plný text článku přes trafilatura → lepší generování
+FETCH_FULLTEXT = False  # plný text se fetchuje až v content_agent při zpracování
 
 # ── Filtrovací klíčová slova (musí být aspoň jedno) ───────────────────────────
 

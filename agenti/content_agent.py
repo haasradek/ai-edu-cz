@@ -21,7 +21,21 @@ if _env.exists():
             os.environ.setdefault(_k.strip(), _v.strip().strip("\"'"))
 
 import anthropic
+import trafilatura
 import database as db
+
+
+def _fetch_fulltext(url: str) -> str | None:
+    """Stáhne plný text článku. Vrátí None pokud selže."""
+    try:
+        downloaded = trafilatura.fetch_url(url)
+        if downloaded:
+            text = trafilatura.extract(downloaded, include_comments=False,
+                                       include_tables=False)
+            return text
+    except Exception:
+        pass
+    return None
 
 MODEL      = "claude-sonnet-4-6"
 MAX_TOKENS = 2048
@@ -136,7 +150,15 @@ def generate(item_id: int, platforms: list[str]) -> dict:
 
     title   = item["title"]
     source  = item["source"]
-    summary = item.get("summary") or ""
+    url     = item.get("url", "")
+
+    # Priorita: plný text z DB → live fetch → shrnutí z RSS
+    fulltext = item.get("content") or ""
+    if not fulltext and url:
+        print(f"  Fetching full text: {url[:60]}…")
+        fulltext = _fetch_fulltext(url) or ""
+
+    summary = fulltext or item.get("summary") or ""
 
     client  = anthropic.Anthropic(api_key=api_key)
     results = {}
