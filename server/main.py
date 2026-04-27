@@ -435,14 +435,17 @@ def api_publish(gen_id: int, body: PublishBody):
     today   = datetime.date.today().isoformat()
     summary = _extract_summary(content)
 
-    # Frontmatter
+    # Frontmatter — escapuj " a ' aby byl YAML validní
+    def _yaml_str(s: str) -> str:
+        return s.replace('\\', '\\\\').replace('"', '\\"')
+
     tags_yaml = json.dumps(tags, ensure_ascii=False)
     fm = (f'---\n'
-          f'title: "{title}"\n'
+          f'title: "{_yaml_str(title)}"\n'
           f'date: "{today}"\n'
-          f'source: "{source}"\n'
+          f'source: "{_yaml_str(source)}"\n'
           f'tags: {tags_yaml}\n'
-          f'summary: "{summary[:180]}"\n'
+          f'summary: "{_yaml_str(summary[:180])}"\n'
           f'---\n\n')
 
     HUGOAI_CLANKY.mkdir(parents=True, exist_ok=True)
