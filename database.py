@@ -147,6 +147,39 @@ def get_generated(item_id: int) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def update_generated_content(gen_id: int, content: str):
+    with get_db() as conn:
+        conn.execute("UPDATE generated SET content=? WHERE id=?", (content, gen_id))
+
+
+def get_all_generated(limit: int = 50, offset: int = 0,
+                       type_filter: str = None) -> list[dict]:
+    with get_db() as conn:
+        q = """
+            SELECT g.id, g.item_id, g.type, g.content, g.created_at,
+                   i.title AS item_title, i.url AS item_url, i.source AS item_source
+            FROM generated g
+            JOIN items i ON g.item_id = i.id
+        """
+        params = []
+        if type_filter:
+            q += " WHERE g.type = ?"
+            params.append(type_filter)
+        q += " ORDER BY g.created_at DESC LIMIT ? OFFSET ?"
+        params += [limit, offset]
+        rows = conn.execute(q, params).fetchall()
+        return [dict(r) for r in rows]
+
+
+def count_generated() -> dict:
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM generated").fetchone()[0]
+        rows  = conn.execute(
+            "SELECT type, COUNT(*) as cnt FROM generated GROUP BY type"
+        ).fetchall()
+        return {"total": total, "by_type": {r["type"]: r["cnt"] for r in rows}}
+
+
 # ── Published ─────────────────────────────────────────────────────────────────
 
 def save_published(generated_id: int, channel: str,

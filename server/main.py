@@ -11,6 +11,7 @@ import re
 import json
 import subprocess
 import datetime
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -24,6 +25,43 @@ import database as db
 
 PROJECT_ROOT = Path(__file__).parent.parent
 STATIC_DIR   = Path(__file__).parent / "static"
+HUGOAI_ROOT  = Path(os.environ.get('HUGOAI_PATH',
+                    r'C:\Users\haasr\Desktop\hugoai'))
+HUGOAI_CLANKY = HUGOAI_ROOT / 'wiki' / 'clanky'
+
+
+# ── Hugo publish helpers ──────────────────────────────────────────────────────
+
+def _slugify(text: str) -> str:
+    text = unicodedata.normalize('NFKD', text)
+    text = ''.join(c for c in text if not unicodedata.combining(c))
+    text = re.sub(r'[^\w\s-]', '', text.lower())
+    text = re.sub(r'[\s_]+', '-', text.strip())
+    return re.sub(r'-+', '-', text)[:80]
+
+
+def _extract_title(content: str) -> str:
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('## '):
+            return stripped[3:].strip()
+    return 'Článek'
+
+
+def _extract_summary(content: str) -> str:
+    """Vezme první větu prvního odstavce (ne heading, ne bold label)."""
+    for line in content.splitlines():
+        s = line.strip()
+        if s and not s.startswith('#') and not s.startswith('**') and not s.startswith('-'):
+            return s[:200]
+    return ''
+
+
+def run_git_hugoai(args: list) -> tuple[str, str, int]:
+    r = subprocess.run(['git'] + args, cwd=HUGOAI_ROOT,
+                       capture_output=True, text=True,
+                       encoding='utf-8', errors='replace')
+    return r.stdout.strip(), r.stderr.strip(), r.returncode
 
 app = FastAPI(title="AI-EDU-CZ Mission Control", docs_url=None, redoc_url=None)
 
@@ -216,6 +254,10 @@ class NoteBody(BaseModel):
     note: str
 
 
+class ProcessBody(BaseModel):
+    platforms: list[str] = ["article"]
+
+
 @app.post("/api/save-session")
 def api_save_session(body: NextStepsBody):
     path = PROJECT_ROOT / 'SESSION.md'
@@ -315,6 +357,108 @@ def api_feed_fetch(background_tasks: BackgroundTasks):
 
     background_tasks.add_task(_run)
     return {'ok': True, 'message': 'RSS agent spuštěn na pozadí. Obnoř stránku za chvíli.'}
+
+
+@app.get("/api/generated")
+def api_get_generated(limit: int = 50, offset: int = 0, type: str = None):
+    items  = db.get_all_generated(limit=limit, offset=offset, type_filter=type)
+    counts = db.count_generated()
+    return {"items": items, "counts": counts}
+
+
+@app.post("/api/process/{item_id}")
+def api_process(item_id: int, body: ProcessBody):
+    """Spustí content agenta synchronně a vrátí vygenerovaný obsah."""
+    try:
+        from agenti.content_agent import generate
+        results = generate(item_id, body.platforms)
+        return {"ok": True, "results": results}
+    except RuntimeError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+class PatchGeneratedBody(BaseModel):
+    content: str
+
+
+@app.patch("/api/generated/{gen_id}")
+def api_patch_generated(gen_id: int, body: PatchGeneratedBody):
+    try:
+        db.update_generated_content(gen_id, body.content)
+        return {"ok": True}
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+class PublishBody(BaseModel):
+    content: str = ""   # pokud prázdný, vezme se z DB
+
+
+@app.post("/api/publish/{gen_id}")
+def api_publish(gen_id: int, body: PublishBody):
+    """Publikuje článek do hugoai/wiki/clanky/ a pushne na GitHub."""
+    if not HUGOAI_ROOT.exists():
+        return JSONResponse(
+            {"ok": False, "error": f"Složka hugoai nenalezena: {HUGOAI_ROOT}"},
+            status_code=400)
+
+    # Načti generated row z DB
+    gen_row = None
+    with __import__('database').get_db() as conn:
+        row = conn.execute("SELECT * FROM generated WHERE id=?", (gen_id,)).fetchone()
+        if row:
+            gen_row = dict(row)
+    if not gen_row:
+        return JSONResponse({"ok": False, "error": "Výstup nenalezen v DB"}, status_code=404)
+
+    content = body.content.strip() or gen_row['content']
+
+    # Načti original item (tags, source)
+    item = db.get_item(gen_row['item_id'])
+    source   = item['source'] if item else ''
+    raw_tags = json.loads(item['tags']) if item else []
+    tags     = [t.lower() for t in raw_tags] + ['ai', 'novinky']
+    tags     = list(dict.fromkeys(tags))   # deduplicate, zachovat pořadí
+
+    # Metadata
+    title   = _extract_title(content)
+    slug    = _slugify(title)
+    today   = datetime.date.today().isoformat()
+    summary = _extract_summary(content)
+
+    # Frontmatter
+    tags_yaml = json.dumps(tags, ensure_ascii=False)
+    fm = (f'---\n'
+          f'title: "{title}"\n'
+          f'date: "{today}"\n'
+          f'source: "{source}"\n'
+          f'tags: {tags_yaml}\n'
+          f'summary: "{summary[:180]}"\n'
+          f'---\n\n')
+
+    HUGOAI_CLANKY.mkdir(parents=True, exist_ok=True)
+    out_path = HUGOAI_CLANKY / f'{slug}.md'
+    out_path.write_text(fm + content, encoding='utf-8')
+
+    # Git commit + push
+    run_git_hugoai(['add', str(out_path)])
+    _, err, code = run_git_hugoai(
+        ['commit', '-m', f'clanek: {title[:55]} [{today}]'])
+    if code != 0 and 'nothing to commit' not in err:
+        return JSONResponse({"ok": False,
+                             "error": f"Git commit selhal: {err}"}, status_code=500)
+    _, err, code = run_git_hugoai(['push'])
+    if code != 0:
+        return JSONResponse({"ok": False,
+                             "error": f"Git push selhal: {err}"}, status_code=500)
+
+    # Zapiš do published tabulky
+    db.save_published(gen_id, channel='hugoai.cz', status='published')
+
+    url = f'https://hugoai.cz/clanky/{slug}'
+    return {"ok": True, "slug": slug, "file": f'{slug}.md', "url": url}
 
 
 @app.get("/api/feed/{item_id}")

@@ -319,11 +319,137 @@ select option{background:#111}
 /* ── Load more ── */
 .load-more-wrap{text-align:center;margin-top:18px}
 
+/* ── Výstupy ── */
+.output-grid{display:flex;flex-direction:column;gap:10px}
+.output-card{
+  background:var(--bg1);border:1px solid var(--border);border-radius:14px;
+  padding:16px 20px;transition:border-color .15s;
+}
+.output-card:hover{border-color:var(--border2)}
+.out-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.out-type{
+  font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:99px;
+  letter-spacing:.04em;
+}
+.out-type-article  {background:rgba(0,212,255,.12);color:var(--c);border:1px solid rgba(0,212,255,.2)}
+.out-type-twitter  {background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.2)}
+.out-type-instagram{background:rgba(236,72,153,.12);color:#f472b6;border:1px solid rgba(236,72,153,.2)}
+.out-type-youtube  {background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.out-date{font-size:.7rem;color:var(--muted);margin-left:auto}
+.out-source{font-size:.68rem;color:var(--c);font-weight:700;margin-bottom:4px}
+.out-title{font-size:.9rem;font-weight:600;color:var(--txt);margin-bottom:3px;line-height:1.4}
+.out-preview{
+  font-size:.78rem;color:var(--muted);line-height:1.5;margin-top:6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.out-actions{display:flex;gap:8px;margin-top:10px}
+.out-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.out-filter-bar .out-type{cursor:pointer;opacity:.55;transition:opacity .15s}
+.out-filter-bar .out-type:hover{opacity:.85}
+.out-filter-bar .out-type.active{opacity:1;box-shadow:0 0 0 2px currentColor}
+
 /* ── Pulse dot ── */
 .pulse{width:7px;height:7px;border-radius:50%;background:var(--c3);
   box-shadow:0 0 0 0 rgba(0,255,136,.4);animation:pulse 2s infinite;display:inline-block}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,255,136,.4)}
   70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+/* ── Modal ── */
+#modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,15,.72);backdrop-filter:blur(8px);
+  z-index:200;display:none;align-items:center;justify-content:center;padding:20px;
+}
+#modal-overlay.open{display:flex}
+#modal{
+  background:linear-gradient(160deg,#252545 0%,#1d1d38 100%);
+  border:2px solid rgba(0,212,255,.55);border-radius:20px;
+  width:100%;max-width:720px;max-height:90vh;overflow:hidden;
+  display:flex;flex-direction:column;min-height:280px;
+  box-shadow:0 0 0 1px rgba(0,212,255,.25),0 0 70px rgba(0,212,255,.18),0 24px 60px rgba(0,0,0,.6);
+}
+.modal-header{
+  padding:20px 24px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0;
+}
+.modal-title{font-size:.95rem;font-weight:700;line-height:1.4;color:var(--txt)}
+.modal-subtitle{font-size:.72rem;color:var(--muted);margin-top:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.modal-close{
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:1.3rem;line-height:1;padding:2px 4px;flex-shrink:0;
+}
+.modal-close:hover{color:var(--txt)}
+.modal-body{padding:20px 24px;overflow-y:auto;flex:1}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0}
+
+/* Platform checklist */
+.platform-list{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.platform-item{
+  display:flex;align-items:center;gap:14px;padding:13px 16px;
+  border:1px solid var(--border);border-radius:12px;cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.platform-item:hover{border-color:var(--border2);background:var(--bg2)}
+.platform-item.checked{border-color:rgba(0,212,255,.35);background:rgba(0,212,255,.05)}
+.platform-item.priority{border-color:rgba(0,212,255,.25);background:rgba(0,212,255,.04)}
+.platform-cb{
+  width:18px;height:18px;border-radius:5px;border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:background .15s,border-color .15s;
+}
+.platform-item.checked .platform-cb{
+  background:var(--c);border-color:var(--c);
+}
+.platform-cb-check{color:#000;font-size:.75rem;font-weight:900;display:none}
+.platform-item.checked .platform-cb-check{display:block}
+.platform-icon{font-size:1.4rem;flex-shrink:0}
+.platform-info{flex:1}
+.platform-name{font-size:.88rem;font-weight:600;color:var(--txt)}
+.platform-desc{font-size:.72rem;color:var(--muted);margin-top:2px}
+.platform-badge{
+  font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:99px;
+  background:rgba(0,212,255,.15);color:var(--c);border:1px solid rgba(0,212,255,.25);
+  letter-spacing:.05em;
+}
+
+/* Generating state */
+#modal-generating{display:none;text-align:center;padding:32px 0}
+.gen-spinner{
+  width:52px;height:52px;border:3px solid rgba(255,255,255,.08);
+  border-top-color:var(--c);border-radius:50%;animation:spin .9s linear infinite;
+  margin:0 auto 16px;
+}
+.gen-msg{font-size:.88rem;color:var(--muted)}
+.gen-platform{font-size:1rem;font-weight:700;color:var(--c);margin-top:6px}
+
+/* Results */
+#modal-results{display:none}
+.result-tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.result-tab{
+  padding:7px 16px;border-radius:8px;border:1px solid var(--border);
+  font-size:.78rem;font-weight:600;cursor:pointer;color:var(--muted);
+  transition:all .15s;
+}
+.result-tab:hover{color:var(--txt);border-color:var(--border2)}
+.result-tab.active{
+  background:rgba(0,212,255,.12);color:var(--c);
+  border-color:rgba(0,212,255,.3);
+}
+.result-panel{display:none}
+.result-panel.active{display:block}
+.result-content{
+  width:100%;box-sizing:border-box;
+  background:rgba(0,0,0,.5);border:1px solid var(--border);border-radius:12px;
+  padding:16px;font-size:.82rem;color:rgba(255,255,255,.8);
+  line-height:1.7;white-space:pre-wrap;word-break:break-word;
+  height:320px;resize:vertical;overflow-y:auto;
+  font-family:'Segoe UI',system-ui,sans-serif;
+  transition:border-color .2s;
+}
+.result-content:focus{outline:none;border-color:rgba(0,212,255,.4)}
+.save-ok{font-size:.75rem;color:var(--c3);display:none}
+.result-actions{display:flex;gap:8px;margin-top:10px;align-items:center}
+.copy-ok{font-size:.75rem;color:var(--c3);display:none}
 </style>
 </head>
 <body>
@@ -354,6 +480,7 @@ select option{background:#111}
 <nav>
   <div class="tab active" onclick="showTab('overview')">📊 Přehled</div>
   <div class="tab" onclick="showTab('feed')">📰 Feed <span id="feed-badge" style="display:none;margin-left:5px;font-size:.64rem;padding:1px 7px;border-radius:99px;background:rgba(0,212,255,.15);color:var(--c);border:1px solid rgba(0,212,255,.2)"></span></div>
+  <div class="tab" onclick="showTab('outputs')">✨ Výstupy <span id="outputs-badge" style="display:none;margin-left:5px;font-size:.64rem;padding:1px 7px;border-radius:99px;background:rgba(0,255,136,.12);color:var(--c3);border:1px solid rgba(0,255,136,.2)"></span></div>
   <div class="tab" onclick="showTab('github')">⚡ GitHub</div>
   <div class="tab" onclick="showTab('session')">💾 Session</div>
 </nav>
@@ -436,6 +563,33 @@ select option{background:#111}
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: Výstupy -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="page wrap" id="tab-outputs">
+
+  <div class="out-filter-bar" id="out-filter-bar">
+    <span style="font-size:.72rem;color:var(--muted);font-weight:600">Filtr:</span>
+    <span class="out-type out-type-article active" onclick="filterOutputs('article')">📝 Článek</span>
+    <span class="out-type out-type-twitter"   onclick="filterOutputs('twitter')">𝕏 Twitter</span>
+    <span class="out-type out-type-instagram" onclick="filterOutputs('instagram')">📸 Instagram</span>
+    <span class="out-type out-type-youtube"   onclick="filterOutputs('youtube')">▶ YouTube</span>
+    <span class="out-type" style="background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--border);cursor:pointer"
+      onclick="filterOutputs(null)">Vše</span>
+    <div style="margin-left:auto">
+      <button class="btn btn-ghost btn-sm" onclick="loadOutputs()">↻ Obnovit</button>
+    </div>
+  </div>
+
+  <div id="outputs-list" class="output-grid">
+    <div class="feed-empty">
+      <div class="empty-icon">✨</div>
+      <p>Zatím žádné výstupy. Zpracuj článek ve Feedu.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
 <!-- TAB: GitHub -->
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <div class="page wrap" id="tab-github">
@@ -491,6 +645,94 @@ select option{background:#111}
 </div>
 
 <div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: Zpracovat článek -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="modal-overlay" onclick="closeModal()">
+  <div id="modal" onclick="event.stopPropagation()">
+
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">Zpracovat článek</div>
+        <div class="modal-subtitle" id="modal-subtitle"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Krok 1: Výběr platforem -->
+      <div id="modal-select">
+        <div class="section-title" style="margin-top:0">Vyberte výstupy k vygenerování</div>
+        <div class="platform-list">
+
+          <label class="platform-item priority checked" id="pl-article" onclick="togglePlatform('article')">
+            <div class="platform-cb"><span class="platform-cb-check">✓</span></div>
+            <div class="platform-icon">📝</div>
+            <div class="platform-info">
+              <div class="platform-name">Článek (blog) <span class="platform-badge">PRIORITA</span></div>
+              <div class="platform-desc">Vzdělávací článek v češtině (600–1000 slov) pro web a blog</div>
+            </div>
+          </label>
+
+          <label class="platform-item" id="pl-twitter" onclick="togglePlatform('twitter')">
+            <div class="platform-cb"><span class="platform-cb-check">✓</span></div>
+            <div class="platform-icon">𝕏</div>
+            <div class="platform-info">
+              <div class="platform-name">Twitter thread</div>
+              <div class="platform-desc">5–7 tweetů, hook + klíčové informace + výzva k akci</div>
+            </div>
+          </label>
+
+          <label class="platform-item" id="pl-instagram" onclick="togglePlatform('instagram')">
+            <div class="platform-cb"><span class="platform-cb-check">✓</span></div>
+            <div class="platform-icon">📸</div>
+            <div class="platform-info">
+              <div class="platform-name">Instagram post</div>
+              <div class="platform-desc">Caption s emoji + hashtags pro Instagram účet AI-EDU-CZ</div>
+            </div>
+          </label>
+
+          <label class="platform-item" id="pl-youtube" onclick="togglePlatform('youtube')">
+            <div class="platform-cb"><span class="platform-cb-check">✓</span></div>
+            <div class="platform-icon">▶</div>
+            <div class="platform-info">
+              <div class="platform-name">YouTube scénář</div>
+              <div class="platform-desc">Scénář pro vzdělávací video (4–6 minut) s vizuálními poznámkami</div>
+            </div>
+          </label>
+
+        </div>
+        <p style="font-size:.72rem;color:var(--muted)">
+          Generování trvá ~5–15 sekund na platformu. Claude API.
+        </p>
+      </div>
+
+      <!-- Krok 2: Generování -->
+      <div id="modal-generating">
+        <div class="gen-spinner"></div>
+        <div class="gen-msg">Generuji obsah pomocí Claude API…</div>
+        <div class="gen-platform" id="gen-platform-label"></div>
+      </div>
+
+      <!-- Krok 3: Výsledky -->
+      <div id="modal-results">
+        <div class="result-tabs" id="result-tabs"></div>
+        <div id="result-panels"></div>
+      </div>
+
+    </div><!-- /modal-body -->
+
+    <div class="modal-footer" id="modal-footer">
+      <button class="btn btn-primary" id="btn-generate" onclick="generateContent()">
+        ⚡ Generovat
+      </button>
+      <button class="btn btn-ghost" onclick="closeModal()">Zrušit</button>
+    </div>
+
+  </div>
+</div>
 
 <script>
 // ── Clock ──────────────────────────────────────────────────────────────────
@@ -553,14 +795,15 @@ async function api(path,data={},method='POST'){
 
 // ── Tabs ───────────────────────────────────────────────────────────────────
 function showTab(name){
+  const names=['overview','feed','outputs','github','session'];
   document.querySelectorAll('.tab').forEach((t,i)=>{
-    const names=['overview','feed','github','session'];
     t.classList.toggle('active',names[i]===name);
   });
   document.querySelectorAll('.page').forEach(p=>{
     p.classList.toggle('active',p.id===`tab-${name}`);
   });
-  if(name==='feed') loadFeed(true);
+  if(name==='feed')    loadFeed(true);
+  if(name==='outputs') loadOutputs();
   if(name==='github'){
     api('/api/status').then(d=>{
       document.getElementById('commits-gh').textContent=d.last_commits||'(žádné commity)';
@@ -678,6 +921,7 @@ let feedOffset=0;
 const FEED_PAGE=30;
 let feedSources=new Set();
 let activeTag=null;
+let feedItemsMap={};  // id → item
 
 const ALL_TAGS=[
   {key:'Claude',    cls:'tag-claude'},
@@ -734,6 +978,9 @@ function renderTags(tagsJson){
 
 function renderItem(item){
   const processed=item.processed===1;
+  const actionBtn=processed
+    ? `<button class="btn btn-green btn-sm" onclick="openResultsModal(${item.id})">✓ Výsledky</button>`
+    : `<button class="btn btn-primary btn-sm" onclick="openProcessModal(${item.id})">⚙ Zpracovat</button>`;
   return `<div class="feed-item${processed?' processed':''}" id="fi-${item.id}">
     <div>
       <div class="fi-meta">
@@ -748,10 +995,7 @@ function renderItem(item){
       ${renderTags(item.tags)}
     </div>
     <div class="fi-actions">
-      <button class="btn btn-primary btn-sm" onclick="processItem(${item.id},this)"
-        ${processed?'disabled':''}>
-        ${processed?'✓ Hotovo':'⚙ Zpracovat'}
-      </button>
+      ${actionBtn}
       <a href="${item.url}" target="_blank" rel="noopener"
         class="btn btn-ghost btn-sm">Otevřít →</a>
     </div>
@@ -768,6 +1012,7 @@ async function loadFeed(reset=true){
   if(activeTag) url+=`&tag=${encodeURIComponent(activeTag)}`;
   const d=await fetch(url).then(r=>r.json());
   const list=document.getElementById('feed-list');
+  d.items.forEach(i=>{ feedItemsMap[i.id]=i; feedSources.add(i.source); });
   const html=d.items.map(renderItem).join('');
   if(reset){
     list.innerHTML=html||`<div class="feed-empty"><div class="empty-icon">📭</div>
@@ -776,7 +1021,6 @@ async function loadFeed(reset=true){
     list.innerHTML+=html;
   }
   // Update sources dropdown
-  d.items.forEach(i=>feedSources.add(i.source));
   updateSourceFilter();
   // Counters
   document.getElementById('fc-total').textContent=d.counts.total;
@@ -828,18 +1072,284 @@ async function fetchRss(){
   },2000);
 }
 
-async function processItem(id,btn){
-  btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
-  // Placeholder — v budoucí fázi zavolá generovací pipeline
-  await new Promise(r=>setTimeout(r,800));
-  toast(`Položka #${id} označena jako zpracovaná (pipeline brzy)`);
-  const el=document.getElementById(`fi-${id}`);
+// ── Modal: Zpracovat ───────────────────────────────────────────────────────
+let _modalItemId = null;
+const _selectedPlatforms = new Set(['article']);  // article checked by default
+
+const PLATFORM_META = {
+  article:   { label: 'Článek (blog)',   icon: '📝' },
+  twitter:   { label: 'Twitter thread',  icon: '𝕏'  },
+  instagram: { label: 'Instagram post',  icon: '📸' },
+  youtube:   { label: 'YouTube scénář',  icon: '▶'  },
+};
+
+function togglePlatform(key){
+  const el=document.getElementById(`pl-${key}`);
+  if(_selectedPlatforms.has(key)){
+    _selectedPlatforms.delete(key);
+    el.classList.remove('checked');
+  } else {
+    _selectedPlatforms.add(key);
+    el.classList.add('checked');
+  }
+  document.getElementById('btn-generate').disabled=_selectedPlatforms.size===0;
+}
+
+function _modalState(state){
+  document.getElementById('modal-select').style.display     = state==='select'     ? 'block' : 'none';
+  document.getElementById('modal-generating').style.display = state==='generating' ? 'block' : 'none';
+  document.getElementById('modal-results').style.display    = state==='results'    ? 'block' : 'none';
+  document.getElementById('modal-footer').style.display     = state==='select'     ? 'flex'  : 'none';
+}
+
+function openProcessModal(id){
+  _modalItemId = id;
+  const item   = feedItemsMap[id] || {};
+
+  // Reset platform checkboxes to default (only article)
+  _selectedPlatforms.clear();
+  _selectedPlatforms.add('article');
+  ['article','twitter','instagram','youtube'].forEach(k=>{
+    const el=document.getElementById(`pl-${k}`);
+    if(el) el.classList.toggle('checked', k==='article');
+  });
+
+  document.getElementById('modal-title').textContent    = 'Zpracovat článek';
+  document.getElementById('modal-subtitle').textContent = item.title || '';
+  document.getElementById('btn-generate').disabled      = false;
+  _modalState('select');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+async function openResultsModal(id){
+  _modalItemId = id;
+  const item   = feedItemsMap[id] || {};
+  document.getElementById('modal-title').textContent    = 'Vygenerovaný obsah';
+  document.getElementById('modal-subtitle').textContent = item.title || '';
+  _modalState('generating');
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('gen-platform-label').textContent = 'Načítám výsledky…';
+
+  const d = await fetch(`/api/feed/${id}`).then(r=>r.json());
+  if(!d.generated || !d.generated.length){
+    _modalState('select');
+    toast('Žádný vygenerovaný obsah. Klikni ⚙ Zpracovat.',false);
+    return;
+  }
+  // Group by type — nejnovější na typ
+  const byType={};
+  d.generated.forEach(g=>{ if(!byType[g.type]) byType[g.type]=g; });
+  _showResults(byType);
+}
+
+async function generateContent(){
+  if(_selectedPlatforms.size===0){ toast('Vyber aspoň jednu platformu.',false); return; }
+  const platforms=[..._selectedPlatforms];
+
+  _modalState('generating');
+  document.getElementById('gen-platform-label').textContent =
+    platforms.map(p=>PLATFORM_META[p]?.label||p).join(' · ');
+  Status.running('Generuji obsah…');
+
+  const d = await api(`/api/process/${_modalItemId}`, {platforms});
+
+  if(!d.ok){
+    _modalState('select');
+    toast(`Chyba: ${d.error}`, false);
+    Status.error('Generování selhalo');
+    return;
+  }
+
+  // Map results to same shape as generated DB rows
+  const byType={};
+  Object.entries(d.results).forEach(([type,r])=>{
+    byType[type]={ type, content: r.content, label: r.label };
+  });
+
+  // Mark item in feed list as processed
+  const el=document.getElementById(`fi-${_modalItemId}`);
   if(el){
     el.classList.add('processed');
-    const newBadge=el.querySelector('.fi-new');
-    if(newBadge)newBadge.remove();
-    btn.textContent='✓ Hotovo';btn.disabled=true;
+    el.querySelector('.fi-new')?.remove();
+    const actBtn=el.querySelector('.fi-actions .btn-primary');
+    if(actBtn){
+      actBtn.className='btn btn-green btn-sm';
+      actBtn.textContent='✓ Výsledky';
+      actBtn.setAttribute('onclick',`openResultsModal(${_modalItemId})`);
+    }
   }
+  if(feedItemsMap[_modalItemId]) feedItemsMap[_modalItemId].processed=1;
+  refreshStatus();
+  Status.ok('Obsah vygenerován');
+  _showResults(byType);
+}
+
+function _showResults(byType){
+  const tabs    = document.getElementById('result-tabs');
+  const panels  = document.getElementById('result-panels');
+  const types   = Object.keys(byType);
+
+  tabs.innerHTML = types.map((t,i)=>`
+    <button class="result-tab${i===0?' active':''}" id="rtab-${t}"
+      onclick="switchResultTab('${t}')">${PLATFORM_META[t]?.icon||''} ${PLATFORM_META[t]?.label||t}
+    </button>`).join('');
+
+  panels.innerHTML = types.map((t,i)=>{
+    const item  = byType[t];
+    const genId = item.id || item.generated_id || '';
+    return `
+    <div class="result-panel${i===0?' active':''}" id="rpanel-${t}">
+      <textarea class="result-content" id="rcontent-${t}" spellcheck="false">${escHtml(item.content)}</textarea>
+      <div class="result-actions">
+        <button class="btn btn-ghost btn-sm" onclick="copyResult('${t}')">📋 Kopírovat</button>
+        ${genId ? `<button class="btn btn-green btn-sm" onclick="saveEdits('${t}',${genId})">💾 Uložit úpravy</button>` : ''}
+        ${(t==='article' && genId) ? `<button class="btn btn-primary btn-sm" id="btnpub-${genId}" onclick="publishArticle('${t}',${genId})">🌐 Publikovat na hugoai.cz</button>` : ''}
+        <span class="copy-ok"  id="copyok-${t}">✓ Zkopírováno!</span>
+        <span class="save-ok"  id="saveok-${t}">✓ Uloženo!</span>
+        <span class="pub-ok"   id="pubok-${genId}" style="display:none;font-size:.75rem;color:var(--c)"></span>
+      </div>
+    </div>`;
+  }).join('');
+
+  _modalState('results');
+}
+
+function switchResultTab(type){
+  document.querySelectorAll('.result-tab').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.result-panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`rtab-${type}`)?.classList.add('active');
+  document.getElementById(`rpanel-${type}`)?.classList.add('active');
+}
+
+async function copyResult(type){
+  const el=document.getElementById(`rcontent-${type}`);
+  const text=el ? (el.tagName==='TEXTAREA' ? el.value : el.textContent) : '';
+  try{
+    await navigator.clipboard.writeText(text);
+    const ok=document.getElementById(`copyok-${type}`);
+    ok.style.display='inline';
+    setTimeout(()=>ok.style.display='none',2000);
+  }catch{toast('Kopírování selhalo — označ text ručně.',false)}
+}
+
+async function saveEdits(type, genId){
+  const el=document.getElementById(`rcontent-${type}`);
+  if(!el) return;
+  const content=el.tagName==='TEXTAREA' ? el.value : el.textContent;
+  const d=await api(`/api/generated/${genId}`,{content},'PATCH');
+  if(d.ok){
+    const ok=document.getElementById(`saveok-${type}`);
+    ok.style.display='inline';
+    setTimeout(()=>ok.style.display='none',2500);
+    toast('Úpravy uloženy do DB',true);
+  } else {
+    toast(`Uložení selhalo: ${d.error||'neznámá chyba'}`,false);
+  }
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function escHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Výstupy tab ────────────────────────────────────────────────────────────
+let _outputsMap  = {};  // id → full content
+let _activeOutFilter = null;
+
+const OUT_META = {
+  article:   { icon:'📝', label:'Článek',    cls:'out-type-article'   },
+  twitter:   { icon:'𝕏',  label:'Twitter',   cls:'out-type-twitter'   },
+  instagram: { icon:'📸', label:'Instagram', cls:'out-type-instagram' },
+  youtube:   { icon:'▶',  label:'YouTube',   cls:'out-type-youtube'   },
+};
+
+async function loadOutputs(){
+  const list=document.getElementById('outputs-list');
+  list.innerHTML=`<div class="feed-empty"><div class="spin" style="margin:0 auto 12px"></div><p>Načítám…</p></div>`;
+
+  let url='/api/generated?limit=100';
+  if(_activeOutFilter) url+=`&type=${_activeOutFilter}`;
+  const d=await fetch(url).then(r=>r.json());
+
+  // Update badge
+  const badge=document.getElementById('outputs-badge');
+  const total=d.counts?.total||0;
+  if(total>0){badge.textContent=total;badge.style.display='inline'}
+  else{badge.style.display='none'}
+
+  if(!d.items||!d.items.length){
+    list.innerHTML=`<div class="feed-empty"><div class="empty-icon">✨</div>
+      <p>Zatím žádné výstupy.<br>Zpracuj článek ve Feedu a výsledky se zobrazí zde.</p></div>`;
+    return;
+  }
+  d.items.forEach(i=>{ _outputsMap[i.id]=i.content; });
+  list.innerHTML=d.items.map(renderOutput).join('');
+}
+
+function filterOutputs(type){
+  _activeOutFilter=type;
+  // Update filter bar active states
+  document.querySelectorAll('#out-filter-bar .out-type').forEach(el=>{
+    const key=el.getAttribute('onclick')?.match(/'(\w+)'/)?.[1]||null;
+    el.classList.toggle('active', key===type);
+  });
+  loadOutputs();
+}
+
+function renderOutput(item){
+  const m=OUT_META[item.type]||{icon:'📄',label:item.type,cls:''};
+  const preview=(item.content||'').slice(0,150).replace(/</g,'&lt;').replace(/>/g,'&gt;')+'…';
+  return `<div class="output-card">
+    <div class="out-header">
+      <span class="out-type ${m.cls}">${m.icon} ${m.label}</span>
+      <span class="out-source">${item.item_source}</span>
+      <span class="out-date">${renderDate(item.created_at)}</span>
+    </div>
+    <div class="out-title">${item.item_title}</div>
+    <div class="out-preview">${preview}</div>
+    <div class="out-actions">
+      <button class="btn btn-ghost btn-sm" onclick="copyOutputById(${item.id})">📋 Kopírovat</button>
+      <button class="btn btn-ghost btn-sm" onclick="openResultsModal(${item.item_id})">🔍 Otevřít detail</button>
+    </div>
+  </div>`;
+}
+
+async function publishArticle(type, genId){
+  const el  = document.getElementById(`rcontent-${type}`);
+  const btn = document.getElementById(`btnpub-${genId}`);
+  const content = el ? (el.tagName==='TEXTAREA' ? el.value : el.textContent) : '';
+  if(!content){ toast('Článek je prázdný.',false); return; }
+
+  btn.innerHTML='<span class="spin"></span> Publikuji…';
+  btn.disabled=true;
+  Status.running('Publikuji na hugoai.cz…');
+
+  const d = await api(`/api/publish/${genId}`, {content});
+
+  btn.innerHTML='🌐 Publikovat na hugoai.cz';
+  btn.disabled=false;
+
+  if(d.ok){
+    const okEl = document.getElementById(`pubok-${genId}`);
+    okEl.innerHTML = `✓ Publikováno → <a href="${d.url}" target="_blank" style="color:var(--c)">${d.url}</a>`;
+    okEl.style.display='inline';
+    Status.ok('Publikováno na hugoai.cz');
+    toast(`✓ Článek je na ${d.url}`, true);
+  } else {
+    toast(`Publikování selhalo: ${d.error}`, false);
+    Status.error('Publikování selhalo');
+  }
+}
+
+async function copyOutputById(id){
+  const text=_outputsMap[id]||'';
+  try{
+    await navigator.clipboard.writeText(text);
+    toast('✓ Zkopírováno do schránky',true);
+  }catch{toast('Kopírování selhalo — použij Ctrl+C ručně.',false)}
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────

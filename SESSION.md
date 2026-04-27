@@ -1,132 +1,129 @@
-# Session State — AI-EDU-CZ
+# Session State — AI-EDU-CZ / HugoAI.cz
 
-> Tento soubor se aktualizuje na konci každého sessionu. Při zahájení nového sessionu ho Claude přečte jako první.
+> Čti tento soubor na začátku každého sessionu. Pak přečti také `C:\Users\haasr\Desktop\hugoai\CLAUDE.md`.
 
 ---
 
 ## Poslední update
-**Datum:** 2026-04-26
-**Session číslo:** 2
+**Datum:** 2026-04-27
+**Session číslo:** 3
 **Claude model:** claude-sonnet-4-6
 
 ---
 
-## Co bylo uděláno v tomto sessionu
+## Stav obou projektů
 
-### Infrastruktura (Fáze A — dokončena)
-- **FastAPI migrace** — `server/main.py` + `server/static/index.html` (nahradil starý `dashboard.py`)
-- **SQLite databáze** — `database.py` (tabulky: `items`, `generated`, `published`)
-- **RSS agent** — `agenti/rss_agent.py` (10 feedů, AI keyword filtr, tag detekce)
-- **`start.py`** — auto-kill portu 8765, jednoduchý restart jedním příkazem
+### Mission Control (ai-edu-cz) — localhost:8765
+- `python start.py` → spustí server na portu 8765
+- Dashboard má 5 tabů: Přehled / Feed / ✨Výstupy / GitHub / Session
+- DB má 112+ článků z RSS feedů
+
+### Veřejný web (hugoai.cz)
+- **URL:** https://hugoai.cz
+- **Deploy:** Vercel — automaticky při `git push` do `haasradek/hugoai`
+- **Lokální složka:** `C:\Users\haasr\Desktop\hugoai\`
+- **Slovník:** 100+ pojmů v `wiki/pojmy/` → `hugoai.cz/slovnik/`
+- **Blog:** `wiki/clanky/` → `hugoai.cz/clanky/` (publikujeme z dashboardu)
+
+---
+
+## Co bylo uděláno v Session 3
+
+### Generovací pipeline (Fáze B — dokončena)
+- **`agenti/content_agent.py`** — Claude API generátor (4 platformy)
+  - `article` — blog článek 600–1000 slov v češtině
+  - `twitter` — thread 5–7 tweetů
+  - `instagram` — caption + hashtags
+  - `youtube` — scénář videa 4–6 minut
+- **`POST /api/process/{item_id}`** — spustí content agenta, vrátí výsledky
 
 ### Dashboard — nové funkce
-- **Tabová navigace** — Přehled / Feed / GitHub / Session
-- **System Status** — animovaný indikátor uprostřed headeru (zelený/oranžový/červený)
-- **Feed sekce** — 112 článků, řazení od nejnovějšího, filtr dle zdroje + stavu
-- **Tagy** — Claude, ChatGPT, Gemini, Grok, Llama, Copilot, Mistral, Perplexity, Agenti, LLM
-- **Tag filtr** — klikatelné pilulky, okamžité filtrování feedu
-- **Polling** — "Stáhnout novinky" čeká na dokončení agenta místo pevného timeoutu
+- **Modal "Zpracovat"** — kliknutím na článek ve Feedu otevře modal s checklistem platforem
+  - Článek (blog) zaškrtnutý defaultně
+  - Twitter, Instagram, YouTube volitelné
+  - Spinner během generování
+  - Výsledky v tabech po vygenerování
+- **Editovatelná textarea** — obsah lze upravit před publikováním
+- **Tlačítko "💾 Uložit úpravy"** — uloží upravenou verzi zpátky do DB
+- **Tlačítko "🌐 Publikovat na hugoai.cz"** — pro typ `article`
+- **Tab "✨ Výstupy"** — všechny vygenerované texty, filtr dle typu, kopírovat
 
-### RSS feedy (funkční)
-| Zdroj | Stav |
-|-------|------|
-| OpenAI Blog | ✅ (filter_ai=True) |
-| TechCrunch AI | ✅ |
-| VentureBeat AI | ✅ |
-| The Verge AI | ✅ |
-| Google News CZ | ✅ (AI klíčová slova v dotazu) |
-| Google News SK | ✅ (AI klíčová slova v dotazu) |
-| Lupa.cz | ✅ (filter_ai=True) |
-| Root.cz | ✅ (filter_ai=True) |
-| Anthropic Blog | ❌ (RSS neexistuje) |
-| HackerNews AI | ❌ (nestabilní) |
+### Publikační pipeline (hotovo)
+- **`POST /api/publish/{gen_id}`** — zapíše `.md` do `hugoai/wiki/clanky/`, git commit + push
+- Frontmatter: `title`, `date`, `source`, `tags`, `summary`
+- Po pushu Vercel automaticky přestaví web
 
----
-
-## Schválená architektura platformy (nezměněno)
-
-### Databáze
-- **SQLite** — `data/aieducz.db`
-- Tabulky: `items`, `generated`, `published`
-
-### Pipeline (co je hotové → co zbývá)
-```
-RSS feeds → SQLite DB ✅
-                ↓
-        Feed v dashboardu ✅
-                ↓
-        Tlačítko "Zpracovat" ⏳ (pipeline zatím placeholder)
-                ↓
-        Claude API → generování obsahu ⏳
-                ↓
-        Fact-check agent ⏳
-                ↓
-        Výstupy: článek CZ, Twitter, Instagram, YouTube, Podcast ⏳
-```
-
-### Jazyk obsahu
-- **DB**: articles v originálním jazyce (EN/CZ)
-- **Výstupy po "Zpracovat"**: vždy česky (Claude API přeloží/přepíše)
+### Opraveno
+- **Worktree bug** — všechny předchozí sessiony editovaly worktree místo hlavního adresáře.
+  Soubory synchronizovány. Od teď vždy editovat v `C:\Users\haasr\Desktop\claude\ai-edu-cz\`
+- **Modal viditelnost** — gradient pozadí + cyan border
+- **`_modalState` bug** — explicitní `'block'/'flex'/'none'` místo prázdného stringu
 
 ---
 
-## Aktuální fáze projektu
-
-**Fáze:** 2 — Generovací pipeline (napojení Claude API)
-**Priorita:** Zprovoznit tlačítko "Zpracovat" — end-to-end od článku k českému obsahu
-
----
-
-## Příští kroky — pro nový session (Fáze B)
-
-1. **Generovací pipeline** — `agenti/content_agent.py` (Claude API)
-   - Vstup: `item_id` z DB
-   - Výstup: článek CZ, Twitter thread, Instagram post, YouTube scénář
-   - Uložení do tabulky `generated`
-2. **Fact-check agent** — `agenti/factcheck_agent.py`
-   - DuckDuckGo search + Claude → % skóre + zdroje
-3. **Napojit tlačítko "Zpracovat"** v dashboardu
-   - POST `/api/process/{item_id}` → spustí content_agent
-   - Zobrazit výsledky (generated content) pod článkem
-4. **Výsledky v dashboardu** — zobrazení vygenerovaného obsahu, možnost kopírovat
-5. **Commit + push** všech změn z tohoto sessionu na GitHub
-
----
-
-## Otevřené otázky pro budoucí session
-
-- Kdy přejít na publikaci přes API (až bude obsah pravidelný a ověřený)?
-- Kdy přidat Supabase (až bude potřeba cloud přístup)?
-- Doménové jméno pro web (ai-edu.cz nebo jiné)?
-- Přidat Windows Task Scheduler pro automatické spouštění RSS agenta?
-
----
-
-## Soubory projektu (aktuální stav)
+## Aktuální pipeline (celkový stav)
 
 ```
-ai-edu-cz/
-├── CLAUDE.md                          ✅
-├── SESSION.md                         ✅ (tento soubor)
-├── PROGRESS.md                        ✅
-├── start.py                           ✅ (auto-kill port, jednoduchý start)
-├── database.py                        ✅ (SQLite — items, generated, published)
-├── dashboard.py                       ⚠ (starý, nahrazen FastAPI — lze smazat)
-├── .env                               ✅ (Anthropic API key)
-├── .env.example                       ✅
-├── .gitignore                         ✅
-├── data/
-│   └── aieducz.db                     ✅ (112 článků)
+RSS feeds → SQLite DB                        ✅
+SQLite DB → Feed dashboard                   ✅
+Feed → "Zpracovat" modal → Claude API        ✅
+Claude API → generated tabulka               ✅
+Editace v modalu + uložit úpravy             ✅
+"Publikovat" → hugoai/wiki/clanky/           ✅
+git push → Vercel → hugoai.cz               ✅
+Tab "Výstupy" — přehled všech výstupů        ✅
+Fact-check agent                             ⏳ TODO
+Automatické plánování (Windows Scheduler)    ⏳ TODO
+Twitter/Instagram přímá publikace            ⏳ budoucí
+```
+
+---
+
+## Příští kroky — pro nový session
+
+1. **Fact-check agent** — `agenti/factcheck_agent.py`
+   - DuckDuckGo/Tavily search + Claude → skóre věrohodnosti + zdroje
+   - Zobrazit v modalu před publikováním
+2. **Automatické spouštění RSS** — Windows Task Scheduler nebo cron
+   - `agenti/rss_agent.py` spouštět každých 6 hodin automaticky
+3. **hugoai.cz — stránka článků** — zkontrolovat jestli `clanky` route v Astru existuje
+   - Pokud ne, vytvořit `site/src/pages/clanky/[slug].astro`
+4. **Vzdělávací obsah** — začít psát lekce do `obsah/modul-1-zaklady/`
+   - Modul 1: Co je AI, jak myslí, mýty, bezpečnost
+5. **Commit + push** ai-edu-cz na GitHub
+
+---
+
+## Otevřené otázky
+
+- Existuje Astro stránka pro `hugoai.cz/clanky/`? Zkontrolovat `site/src/pages/`.
+- Přidat Windows Task Scheduler pro automatický RSS fetch?
+- Twitter/Instagram API pro přímou publikaci (zatím jen clipboard)?
+- Newsletter integrace (Beehiiv)?
+
+---
+
+## Soubory — kompletní stav
+
+```
+C:\Users\haasr\Desktop\claude\ai-edu-cz\    ← EDITOVAT ZDE
+├── CLAUDE.md                    ✅ přečíst na začátku sessionu
+├── SESSION.md                   ✅ tento soubor
+├── PROGRESS.md                  ✅
+├── start.py                     ✅ python start.py → localhost:8765
+├── database.py                  ✅ get_all_generated(), update_generated_content()
+├── .env                         ✅ ANTHROPIC_API_KEY, HUGOAI_PATH
 ├── server/
-│   ├── main.py                        ✅ (FastAPI backend)
-│   └── static/index.html              ✅ (dashboard — Feed, tagy, filtry, status)
+│   ├── main.py                  ✅ všechny API endpointy vč. /api/publish/
+│   └── static/index.html        ✅ dashboard — modal, výstupy, publikování
 ├── agenti/
-│   └── rss_agent.py                   ✅ (10 feedů, AI filtr, tagy)
-│   └── content_agent.py               ⏳ (Fáze B)
-│   └── factcheck_agent.py             ⏳ (Fáze B)
-├── strategie/                         ✅ (5 dokumentů)
-├── obsah/modul-1-zaklady/            ✅ (1 lekce)
-├── obsah/modul-2 až modul-6/        ⏳ (prázdné, připravené)
-├── prompt-knihovna/                   ✅ (emailové šablony)
-└── sablony/                           ✅ (Twitter šablona)
+│   ├── rss_agent.py             ✅
+│   ├── content_agent.py         ✅ Claude API, 4 platformy
+│   └── factcheck_agent.py       ⏳ TODO
+
+C:\Users\haasr\Desktop\hugoai\              ← VEŘEJNÝ WEB
+├── CLAUDE.md                    ✅ přečíst na začátku sessionu
+├── wiki/pojmy/                  ✅ 100+ pojmů
+├── wiki/clanky/                 ✅ blog (publikováno z dashboardu)
+└── site/                        ✅ Astro projekt (npm run build → Vercel)
 ```
