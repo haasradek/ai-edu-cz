@@ -363,6 +363,13 @@ def api_feed_fetch(background_tasks: BackgroundTasks):
 def api_get_generated(limit: int = 50, offset: int = 0, type: str = None):
     items  = db.get_all_generated(limit=limit, offset=offset, type_filter=type)
     counts = db.count_generated()
+    # Přidej published_url pokud je článek publikovaný
+    for item in items:
+        if item.get('published_channel') == 'hugoai.cz':
+            slug = _slugify(_extract_title(item.get('content', '')))
+            item['published_url'] = f'https://hugoai.cz/clanky/{slug}'
+        else:
+            item['published_url'] = None
     return {"items": items, "counts": counts}
 
 

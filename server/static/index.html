@@ -812,6 +812,15 @@ function showTab(name){
 }
 
 // ── Status ─────────────────────────────────────────────────────────────────
+async function refreshOutputsBadge(){
+  const d=await fetch('/api/generated?limit=1').then(r=>r.json()).catch(()=>null);
+  if(!d) return;
+  const total=d.counts?.total||0;
+  const badge=document.getElementById('outputs-badge');
+  if(total>0){badge.textContent=total;badge.style.display='inline'}
+  else{badge.style.display='none'}
+}
+
 async function refreshStatus(){
   const d=await api('/api/status');
   const pct=d.total?Math.round(d.done/d.total*100):0;
@@ -1314,6 +1323,10 @@ function renderOutput(item){
       <button class="btn btn-ghost btn-sm" onclick="copyOutputById(${item.id})">📋 Kopírovat</button>
       <button class="btn btn-ghost btn-sm" onclick="openResultsModal(${item.item_id})">🔍 Otevřít detail</button>
     </div>
+    ${item.published_url ? `<div style="margin-top:8px;font-size:.73rem;">
+      <span style="color:var(--c3)">✓ Publikováno</span>
+      <a href="${item.published_url}" target="_blank" style="color:var(--c);margin-left:6px;">${item.published_url}</a>
+    </div>` : ''}
   </div>`;
 }
 
@@ -1354,6 +1367,7 @@ async function copyOutputById(id){
 
 // ── Init ───────────────────────────────────────────────────────────────────
 refreshStatus();
+refreshOutputsBadge();
 renderTagFilterBar();
 </script>
 </body>

@@ -157,9 +157,13 @@ def get_all_generated(limit: int = 50, offset: int = 0,
     with get_db() as conn:
         q = """
             SELECT g.id, g.item_id, g.type, g.content, g.created_at,
-                   i.title AS item_title, i.url AS item_url, i.source AS item_source
+                   i.title AS item_title, i.url AS item_url, i.source AS item_source,
+                   p.channel AS published_channel,
+                   p.status  AS published_status,
+                   p.published_at AS published_at_ts
             FROM generated g
             JOIN items i ON g.item_id = i.id
+            LEFT JOIN published p ON p.generated_id = g.id AND p.status = 'published'
         """
         params = []
         if type_filter:
