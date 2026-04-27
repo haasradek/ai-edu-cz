@@ -140,10 +140,16 @@ def save_generated(item_id: int, type: str, content: str,
 
 def get_generated(item_id: int) -> list[dict]:
     with get_db() as conn:
-        rows = conn.execute(
-            "SELECT * FROM generated WHERE item_id=? ORDER BY created_at DESC",
-            (item_id,)
-        ).fetchall()
+        rows = conn.execute("""
+            SELECT g.*,
+                   p.status      AS pub_status,
+                   p.channel     AS pub_channel,
+                   p.published_at AS pub_at
+            FROM generated g
+            LEFT JOIN published p ON p.generated_id = g.id AND p.status = 'published'
+            WHERE g.item_id = ?
+            ORDER BY g.created_at DESC
+        """, (item_id,)).fetchall()
         return [dict(r) for r in rows]
 
 

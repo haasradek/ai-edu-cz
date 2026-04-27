@@ -474,6 +474,13 @@ def api_feed_item(item_id: int):
     if not item:
         return JSONResponse({'error': 'Položka nenalezena'}, status_code=404)
     generated = db.get_generated(item_id)
+    # Přidej published_url ke každému generated itemu
+    for g in generated:
+        if g.get('pub_channel') == 'hugoai.cz':
+            slug = _slugify(_extract_title(g.get('content', '')))
+            g['published_url'] = f'https://hugoai.cz/clanky/{slug}'
+        else:
+            g['published_url'] = None
     return {'item': item, 'generated': generated}
 
 

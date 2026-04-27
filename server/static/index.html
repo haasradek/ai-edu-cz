@@ -1212,7 +1212,14 @@ function _showResults(byType){
       <div class="result-actions">
         <button class="btn btn-ghost btn-sm" onclick="copyResult('${t}')">📋 Kopírovat</button>
         ${genId ? `<button class="btn btn-green btn-sm" onclick="saveEdits('${t}',${genId})">💾 Uložit úpravy</button>` : ''}
-        ${(t==='article' && genId) ? `<button class="btn btn-primary btn-sm" id="btnpub-${genId}" onclick="publishArticle('${t}',${genId})">🌐 Publikovat na hugoai.cz</button>` : ''}
+        ${(t==='article' && genId) ? (
+          item.published_url
+            ? `<span style="font-size:.78rem;color:var(--c3);display:flex;align-items:center;gap:6px;">
+                ✓ Publikováno →
+                <a href="${item.published_url}" target="_blank" style="color:var(--c)">${item.published_url}</a>
+               </span>`
+            : `<button class="btn btn-primary btn-sm" id="btnpub-${genId}" onclick="publishArticle('${t}',${genId})">🌐 Publikovat na hugoai.cz</button>`
+        ) : ''}
         <span class="copy-ok"  id="copyok-${t}">✓ Zkopírováno!</span>
         <span class="save-ok"  id="saveok-${t}">✓ Uloženo!</span>
         <span class="pub-ok"   id="pubok-${genId}" style="display:none;font-size:.75rem;color:var(--c)"></span>
