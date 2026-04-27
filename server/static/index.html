@@ -245,7 +245,7 @@ select option{background:#111}
 .feed-item{
   background:var(--bg1);border:1px solid var(--border);
   border-radius:14px;padding:16px 20px;
-  display:grid;grid-template-columns:1fr auto;gap:12px;
+  display:grid;grid-template-columns:20px 1fr auto;gap:12px;
   transition:border-color .15s;
 }
 .feed-item:hover{border-color:var(--border2)}
@@ -318,6 +318,27 @@ select option{background:#111}
 
 /* ── Load more ── */
 .load-more-wrap{text-align:center;margin-top:18px}
+
+/* ── Batch select ── */
+.fi-cb-col{display:flex;align-items:flex-start;padding-top:3px}
+.item-cb{
+  width:16px;height:16px;cursor:pointer;flex-shrink:0;
+  accent-color:var(--c);border-radius:4px;
+}
+.batch-bar{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  z-index:100;
+  display:flex;align-items:center;gap:10px;
+  padding:12px 20px;border-radius:99px;white-space:nowrap;
+  background:rgba(8,8,24,.92);backdrop-filter:blur(16px);
+  border:1px solid rgba(0,212,255,.35);
+  box-shadow:0 8px 32px rgba(0,0,0,.5),0 0 24px rgba(0,212,255,.12);
+}
+.batch-bar-count{font-size:.82rem;font-weight:700;color:var(--c)}
+.bprog-bg{background:rgba(255,255,255,.06);border-radius:99px;height:8px;
+  margin:18px 0 8px;overflow:hidden}
+.bprog-fg{height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--c),var(--c2));transition:width .3s ease}
 
 /* ── Výstupy ── */
 .output-grid{display:flex;flex-direction:column;gap:10px}
@@ -549,11 +570,19 @@ select option{background:#111}
       <option value="">Vše</option>
       <option value="0">Jen nové</option>
       <option value="1">Zpracované</option>
+      <option value="2">Skryté</option>
     </select>
     <button class="btn btn-ghost btn-sm" onclick="loadFeed(true)">↻ Obnovit</button>
     <div class="feed-counter">
       Celkem: <b id="fc-total">—</b> · Nové: <b id="fc-new">—</b>
     </div>
+  </div>
+
+  <div id="batch-bar" class="batch-bar" style="display:none">
+    <span class="batch-bar-count" id="batch-bar-count">0 vybráno</span>
+    <button class="btn btn-primary btn-sm" onclick="openBatchModal()">⚡ Zpracovat vybrané</button>
+    <button class="btn btn-ghost btn-sm" onclick="selectAllNew()">☑ Vybrat vše nové</button>
+    <button class="btn btn-ghost btn-sm" onclick="clearSelection()">✕ Zrušit výběr</button>
   </div>
 
   <div class="tag-filter-bar" id="tag-filter-bar"></div>
@@ -713,16 +742,60 @@ select option{background:#111}
           </label>
 
         </div>
-        <p style="font-size:.72rem;color:var(--muted)">
-          Generování trvá ~5–15 sekund na platformu. Claude API.
+        <!-- Výběr modelu -->
+        <div class="section-title" style="margin-top:16px">Model</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+
+          <label id="model-claude" onclick="selectModel('claude')" style="
+            display:flex;align-items:center;gap:10px;
+            padding:10px 14px;border-radius:8px;cursor:pointer;
+            background:rgba(29,111,235,0.12);border:2px solid rgba(29,111,235,0.6);
+            flex:1;min-width:180px;
+          ">
+            <div style="font-size:1.2rem">🧠</div>
+            <div>
+              <div style="font-size:.82rem;font-weight:700;color:var(--text)">Claude Sonnet 4.6</div>
+              <div style="font-size:.7rem;color:var(--muted)">Nejlepší kvalita</div>
+            </div>
+            <div id="model-claude-check" style="margin-left:auto;color:#1D6FEB;font-weight:700">✓</div>
+          </label>
+
+          <label id="model-gemini" onclick="selectModel('gemini')" style="
+            display:flex;align-items:center;gap:10px;
+            padding:10px 14px;border-radius:8px;cursor:pointer;
+            background:rgba(15,25,48,0.6);border:2px solid rgba(29,111,235,0.15);
+            flex:1;min-width:180px;
+          ">
+            <div style="font-size:1.2rem">✨</div>
+            <div>
+              <div style="font-size:.82rem;font-weight:700;color:var(--text)">Gemini 2.0 Flash</div>
+              <div style="font-size:.7rem;color:#22c55e;font-weight:600">Zdarma · Google AI Studio</div>
+            </div>
+            <div id="model-gemini-check" style="margin-left:auto;color:#1D6FEB;font-weight:700;display:none">✓</div>
+          </label>
+
+        </div>
+        <p style="font-size:.72rem;color:var(--muted);margin-top:10px">
+          Generování trvá ~5–15 sekund na platformu.
         </p>
       </div>
 
       <!-- Krok 2: Generování -->
       <div id="modal-generating">
         <div class="gen-spinner"></div>
-        <div class="gen-msg">Generuji obsah pomocí Claude API…</div>
+        <div class="gen-msg" id="modal-gen-msg">Generuji obsah…</div>
         <div class="gen-platform" id="gen-platform-label"></div>
+      </div>
+
+      <!-- Batch progress -->
+      <div id="modal-batch-progress" style="display:none">
+        <div style="text-align:center;padding:24px 0 8px">
+          <div class="gen-spinner"></div>
+          <div class="gen-msg" style="margin-top:12px">Zpracovávám článek po článku…</div>
+          <div class="gen-platform" id="batch-progress-label">0 / 0</div>
+        </div>
+        <div class="bprog-bg"><div class="bprog-fg" id="batch-pbar" style="width:0%"></div></div>
+        <div id="batch-errors-list" style="margin-top:10px"></div>
       </div>
 
       <!-- Krok 3: Výsledky -->
@@ -940,6 +1013,7 @@ const FEED_PAGE=30;
 let feedSources=new Set();
 let activeTag=null;
 let feedItemsMap={};  // id → item
+const _selectedItems=new Set();  // ids vybraných článků pro batch
 
 const ALL_TAGS=[
   {key:'Claude',    cls:'tag-claude'},
@@ -998,8 +1072,15 @@ function renderItem(item){
   const processed=item.processed===1;
   const actionBtn=processed
     ? `<button class="btn btn-green btn-sm" onclick="openResultsModal(${item.id})">✓ Výsledky</button>`
-    : `<button class="btn btn-primary btn-sm" onclick="openProcessModal(${item.id})">⚙ Zpracovat</button>`;
+    : `<button class="btn btn-primary btn-sm" onclick="openProcessModal(${item.id})">⚙ Zpracovat</button>
+       <button class="btn btn-ghost btn-sm" onclick="dismissItem(${item.id})" title="Skrýt článek" style="color:var(--muted);padding:6px 10px">✕</button>`;
+  const cbHtml=!processed
+    ? `<input type="checkbox" class="item-cb" id="cb-${item.id}"
+        ${_selectedItems.has(item.id)?'checked':''}
+        onchange="toggleItemSelect(${item.id})" onclick="event.stopPropagation()">`
+    : '';
   return `<div class="feed-item${processed?' processed':''}" id="fi-${item.id}">
+    <div class="fi-cb-col">${cbHtml}</div>
     <div>
       <div class="fi-meta">
         <span class="fi-source">${item.source}</span>
@@ -1065,6 +1146,22 @@ function updateSourceFilter(){
 
 function loadMore(){loadFeed(false)}
 
+async function dismissItem(id){
+  const el=document.getElementById(`fi-${id}`);
+  if(el){ el.style.opacity='.3'; el.style.pointerEvents='none'; }
+  await api(`/api/feed/${id}/dismiss`);
+  if(el) el.remove();
+  _selectedItems.delete(id);
+  updateBatchBar();
+  // Aktualizuj počítadla
+  const d=await fetch('/api/feed?limit=1').then(r=>r.json());
+  document.getElementById('fc-total').textContent=d.counts.total;
+  document.getElementById('fc-new').textContent=d.counts.new;
+  const badge=document.getElementById('feed-badge');
+  if(d.counts.new>0){badge.textContent=d.counts.new;badge.style.display='inline'}
+  else badge.style.display='none';
+}
+
 async function fetchRss(){
   const btn=document.getElementById('btn-fetch-rss');
   btn.innerHTML='<span class="spin"></span> Stahuji…';btn.disabled=true;
@@ -1092,7 +1189,21 @@ async function fetchRss(){
 
 // ── Modal: Zpracovat ───────────────────────────────────────────────────────
 let _modalItemId = null;
+let _selectedModel = 'claude';
 const _selectedPlatforms = new Set(['article']);  // article checked by default
+
+function selectModel(model) {
+  _selectedModel = model;
+  const models = ['claude', 'gemini'];
+  models.forEach(m => {
+    const card  = document.getElementById(`model-${m}`);
+    const check = document.getElementById(`model-${m}-check`);
+    const active = m === model;
+    card.style.background = active ? 'rgba(29,111,235,0.12)' : 'rgba(15,25,48,0.6)';
+    card.style.borderColor = active ? 'rgba(29,111,235,0.6)' : 'rgba(29,111,235,0.15)';
+    check.style.display = active ? 'block' : 'none';
+  });
+}
 
 const PLATFORM_META = {
   article:   { label: 'Článek (blog)',   icon: '📝' },
@@ -1114,10 +1225,11 @@ function togglePlatform(key){
 }
 
 function _modalState(state){
-  document.getElementById('modal-select').style.display     = state==='select'     ? 'block' : 'none';
-  document.getElementById('modal-generating').style.display = state==='generating' ? 'block' : 'none';
-  document.getElementById('modal-results').style.display    = state==='results'    ? 'block' : 'none';
-  document.getElementById('modal-footer').style.display     = state==='select'     ? 'flex'  : 'none';
+  document.getElementById('modal-select').style.display          = state==='select'          ? 'block' : 'none';
+  document.getElementById('modal-generating').style.display      = state==='generating'      ? 'block' : 'none';
+  document.getElementById('modal-results').style.display         = state==='results'         ? 'block' : 'none';
+  document.getElementById('modal-batch-progress').style.display  = state==='batch-progress'  ? 'block' : 'none';
+  document.getElementById('modal-footer').style.display          = state==='select'          ? 'flex'  : 'none';
 }
 
 function openProcessModal(id){
@@ -1132,9 +1244,15 @@ function openProcessModal(id){
     if(el) el.classList.toggle('checked', k==='article');
   });
 
+  // Reset model selector to Claude
+  selectModel('claude');
+
   document.getElementById('modal-title').textContent    = 'Zpracovat článek';
   document.getElementById('modal-subtitle').textContent = item.title || '';
-  document.getElementById('btn-generate').disabled      = false;
+  const btnGen = document.getElementById('btn-generate');
+  btnGen.disabled = false;
+  btnGen.textContent = '⚡ Generovat';
+  btnGen.onclick = generateContent;
   _modalState('select');
   document.getElementById('modal-overlay').classList.add('open');
 }
@@ -1163,13 +1281,16 @@ async function openResultsModal(id){
 async function generateContent(){
   if(_selectedPlatforms.size===0){ toast('Vyber aspoň jednu platformu.',false); return; }
   const platforms=[..._selectedPlatforms];
+  const model=_selectedModel;
 
   _modalState('generating');
+  const modelLabel = model==='gemini' ? 'Gemini 2.0 Flash' : 'Claude Sonnet 4.6';
+  document.getElementById('modal-gen-msg').textContent = `Generuji obsah pomocí ${modelLabel}…`;
   document.getElementById('gen-platform-label').textContent =
     platforms.map(p=>PLATFORM_META[p]?.label||p).join(' · ');
-  Status.running('Generuji obsah…');
+  Status.running(`Generuji obsah (${modelLabel})…`);
 
-  const d = await api(`/api/process/${_modalItemId}`, {platforms});
+  const d = await api(`/api/process/${_modalItemId}`, {platforms, model});
 
   if(!d.ok){
     _modalState('select');
@@ -1392,6 +1513,100 @@ async function copyOutputById(id){
     await navigator.clipboard.writeText(text);
     toast('✓ Zkopírováno do schránky',true);
   }catch{toast('Kopírování selhalo — použij Ctrl+C ručně.',false)}
+}
+
+// ── Batch select ──────────────────────────────────────────────────────────
+function toggleItemSelect(id){
+  if(_selectedItems.has(id)) _selectedItems.delete(id);
+  else _selectedItems.add(id);
+  updateBatchBar();
+}
+
+function updateBatchBar(){
+  const bar=document.getElementById('batch-bar');
+  const cnt=document.getElementById('batch-bar-count');
+  const n=_selectedItems.size;
+  bar.style.display=n>0?'flex':'none';
+  cnt.textContent=`${n} vyb${n===1?'rán':'ráno'}`;
+}
+
+function clearSelection(){
+  _selectedItems.clear();
+  document.querySelectorAll('.item-cb').forEach(cb=>cb.checked=false);
+  updateBatchBar();
+}
+
+function selectAllNew(){
+  document.querySelectorAll('.item-cb').forEach(cb=>{
+    const id=parseInt(cb.id.replace('cb-',''));
+    cb.checked=true;
+    _selectedItems.add(id);
+  });
+  updateBatchBar();
+}
+
+function openBatchModal(){
+  if(_selectedItems.size===0){toast('Nejdříve vyber články.',false);return;}
+  document.getElementById('modal-title').textContent=`Zpracovat ${_selectedItems.size} článk${_selectedItems.size===1?'':'ů'}`;
+  document.getElementById('modal-subtitle').textContent='Generování proběhne postupně pro každý vybraný článek.';
+  _selectedPlatforms.clear();
+  _selectedPlatforms.add('article');
+  ['article','twitter','instagram','youtube'].forEach(k=>{
+    const el=document.getElementById(`pl-${k}`);
+    if(el) el.classList.toggle('checked',k==='article');
+  });
+  const btnGen=document.getElementById('btn-generate');
+  btnGen.disabled=false;
+  btnGen.textContent=`⚡ Generovat (${_selectedItems.size})`;
+  btnGen.onclick=startBatchProcess;
+  _modalState('select');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+async function startBatchProcess(){
+  const platforms=[..._selectedPlatforms];
+  const item_ids=[..._selectedItems];
+  const model=_selectedModel;
+  document.getElementById('batch-progress-label').textContent=`0 / ${item_ids.length}`;
+  document.getElementById('batch-pbar').style.width='0%';
+  document.getElementById('batch-errors-list').innerHTML='';
+  _modalState('batch-progress');
+  Status.running(`Batch: 0/${item_ids.length}…`);
+  const d=await api('/api/process-batch',{item_ids,platforms,model});
+  if(!d.ok){
+    _modalState('select');
+    toast(`Batch selhal: ${d.error||'neznámá chyba'}`,false);
+    return;
+  }
+  pollBatchJob(d.job_id,item_ids.length);
+}
+
+async function pollBatchJob(jobId,total){
+  const r=await fetch(`/api/process-batch/${jobId}`).then(x=>x.json());
+  const done=r.done||0;
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('batch-progress-label').textContent=`${done} / ${total}`;
+  document.getElementById('batch-pbar').style.width=pct+'%';
+  Status.running(`Batch: ${done}/${total}…`);
+
+  if(r.status==='done'){
+    const errors=r.errors||[];
+    const ok=total-errors.length;
+    if(errors.length){
+      document.getElementById('batch-errors-list').innerHTML=
+        errors.map(e=>`<div style="font-size:.75rem;color:var(--red);margin-bottom:4px">⚠ ID ${e.id}: ${e.error}</div>`).join('');
+    }
+    Status.ok(`Batch hotov: ${ok}/${total} OK`);
+    toast(`✓ Batch dokončen — ${ok} článků zpracováno${errors.length?`, ${errors.length} chyb`:''}`,errors.length===0);
+    _selectedItems.clear();
+    updateBatchBar();
+    await loadFeed(true);
+    refreshStatus();
+    refreshOutputsBadge();
+    setTimeout(()=>closeModal(),2500);
+    return;
+  }
+  setTimeout(()=>pollBatchJob(jobId,total),2000);
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────

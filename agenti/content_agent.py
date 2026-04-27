@@ -21,6 +21,7 @@ if _env.exists():
             os.environ.setdefault(_k.strip(), _v.strip().strip("\"'"))
 
 import anthropic
+from google import genai as google_genai
 import trafilatura
 import database as db
 
@@ -37,8 +38,14 @@ def _fetch_fulltext(url: str) -> str | None:
         pass
     return None
 
-MODEL      = "claude-sonnet-4-6"
-MAX_TOKENS = 2048
+CLAUDE_MODEL  = "claude-sonnet-4-6"
+GEMINI_MODEL  = "gemini-2.0-flash"
+MAX_TOKENS    = 2048
+
+MODELS = {
+    "claude": "Claude Sonnet 4.6",
+    "gemini": "Gemini 2.0 Flash (zdarma)",
+}
 
 PLATFORMS = {
     "article":   "Článek (blog)",
@@ -135,49 +142,70 @@ Piš přirozeně, hovorově."""
     raise ValueError(f"Neznámá platforma: {platform}")
 
 
-def generate(item_id: int, platforms: list[str]) -> dict:
+def _call_claude(prompt: str) -> str:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY není nastaven v .env")
+    client = anthropic.Anthropic(api_key=api_key)
+    msg = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=MAX_TOKENS,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return msg.content[0].text
+
+
+def _call_gemini(prompt: str) -> str:
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY není nastaven v .env")
+    client = google_genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+    )
+    return response.text
+
+
+def generate(item_id: int, platforms: list[str], model: str = "claude") -> dict:
     """
     Vygeneruje obsah pro zadané platformy a uloží do DB.
-    Vrátí dict: {platform: {"content": str, "generated_id": int, "label": str}}
+    model: "claude" nebo "gemini"
+    Vrátí dict: {platform: {"content": str, "generated_id": int, "label": str, "model": str}}
     """
     item = db.get_item(item_id)
     if not item:
         raise ValueError(f"Položka #{item_id} nenalezena v DB")
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY není nastaven v .env")
+    if model not in MODELS:
+        model = "claude"
 
     title   = item["title"]
     source  = item["source"]
     url     = item.get("url", "")
 
-    # Priorita: plný text z DB → live fetch → shrnutí z RSS
     fulltext = item.get("content") or ""
     if not fulltext and url:
         print(f"  Fetching full text: {url[:60]}…")
         fulltext = _fetch_fulltext(url) or ""
 
     summary = fulltext or item.get("summary") or ""
-
-    client  = anthropic.Anthropic(api_key=api_key)
     results = {}
 
     for platform in platforms:
         if platform not in PLATFORMS:
             continue
-        prompt  = _prompt(platform, title, source, summary)
-        message = client.messages.create(
-            model=MODEL,
-            max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        content = message.content[0].text
-        gen_id  = db.save_generated(item_id=item_id, type=platform, content=content)
+        prompt = _prompt(platform, title, source, summary)
+        if model == "gemini":
+            content = _call_gemini(prompt)
+        else:
+            content = _call_claude(prompt)
+        gen_id = db.save_generated(item_id=item_id, type=platform, content=content)
         results[platform] = {
             "content":      content,
             "generated_id": gen_id,
             "label":        PLATFORMS[platform],
+            "model":        MODELS[model],
         }
 
     if results:

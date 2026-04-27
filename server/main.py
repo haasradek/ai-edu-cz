@@ -11,6 +11,7 @@ import re
 import json
 import subprocess
 import datetime
+import uuid
 import unicodedata
 from pathlib import Path
 
@@ -99,6 +100,8 @@ DANGEROUS_FILENAMES = {'credentials.json', 'secrets.json', 'service-account.json
 SKIP_DIRS = {'.git', '__pycache__', 'node_modules', '.astro', 'dist', '.venv', 'venv', 'data'}
 SKIP_EXTS = {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip',
              '.mp4', '.mp3', '.wav', '.ttf', '.woff', '.woff2', '.pyc', '.db'}
+
+_batch_jobs: dict = {}
 
 
 def _is_gitignored(rel_path):
@@ -256,6 +259,13 @@ class NoteBody(BaseModel):
 
 class ProcessBody(BaseModel):
     platforms: list[str] = ["article"]
+    model: str = "claude"
+
+
+class BatchProcessBody(BaseModel):
+    item_ids: list[int]
+    platforms: list[str] = ["article"]
+    model: str = "claude"
 
 
 @app.post("/api/save-session")
@@ -378,12 +388,47 @@ def api_process(item_id: int, body: ProcessBody):
     """Spustí content agenta synchronně a vrátí vygenerovaný obsah."""
     try:
         from agenti.content_agent import generate
-        results = generate(item_id, body.platforms)
+        results = generate(item_id, body.platforms, body.model)
         return {"ok": True, "results": results}
     except RuntimeError as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/process-batch")
+def api_process_batch(body: BatchProcessBody, background_tasks: BackgroundTasks):
+    """Spustí hromadné zpracování na pozadí, vrátí job_id pro polling."""
+    if not body.item_ids:
+        return JSONResponse({"ok": False, "error": "Žádné item_ids"}, status_code=400)
+    job_id = uuid.uuid4().hex[:8]
+    _batch_jobs[job_id] = {
+        "status": "running",
+        "total": len(body.item_ids),
+        "done": 0,
+        "errors": [],
+    }
+
+    def _run():
+        from agenti.content_agent import generate
+        for item_id in body.item_ids:
+            try:
+                generate(item_id, body.platforms, body.model)
+            except Exception as e:
+                _batch_jobs[job_id]["errors"].append({"id": item_id, "error": str(e)})
+            _batch_jobs[job_id]["done"] += 1
+        _batch_jobs[job_id]["status"] = "done"
+
+    background_tasks.add_task(_run)
+    return {"ok": True, "job_id": job_id, "total": len(body.item_ids)}
+
+
+@app.get("/api/process-batch/{job_id}")
+def api_process_batch_status(job_id: str):
+    job = _batch_jobs.get(job_id)
+    if not job:
+        return JSONResponse({"error": "Job nenalezen"}, status_code=404)
+    return job
 
 
 class PatchGeneratedBody(BaseModel):
@@ -430,10 +475,11 @@ def api_publish(gen_id: int, body: PublishBody):
     tags     = list(dict.fromkeys(tags))   # deduplicate, zachovat pořadí
 
     # Metadata
-    title   = _extract_title(content)
-    slug    = _slugify(title)
-    today   = datetime.date.today().isoformat()
-    summary = _extract_summary(content)
+    title    = _extract_title(content)
+    slug     = _slugify(title)
+    today    = datetime.date.today().isoformat()
+    now_iso  = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+    summary  = _extract_summary(content)
 
     # Frontmatter — escapuj " a ' aby byl YAML validní
     def _yaml_str(s: str) -> str:
@@ -442,7 +488,7 @@ def api_publish(gen_id: int, body: PublishBody):
     tags_yaml = json.dumps(tags, ensure_ascii=False)
     fm = (f'---\n'
           f'title: "{_yaml_str(title)}"\n'
-          f'date: "{today}"\n'
+          f'date: "{now_iso}"\n'
           f'source: "{_yaml_str(source)}"\n'
           f'tags: {tags_yaml}\n'
           f'summary: "{_yaml_str(summary[:180])}"\n'
@@ -469,6 +515,13 @@ def api_publish(gen_id: int, body: PublishBody):
 
     url = f'https://hugoai.cz/clanky/{slug}'
     return {"ok": True, "slug": slug, "file": f'{slug}.md', "url": url}
+
+
+@app.post("/api/feed/{item_id}/dismiss")
+def api_dismiss(item_id: int):
+    with __import__('database').get_db() as conn:
+        conn.execute("UPDATE items SET processed=2 WHERE id=?", (item_id,))
+    return {"ok": True}
 
 
 @app.get("/api/feed/{item_id}")
